@@ -67,8 +67,8 @@ Ogni giorno alle 11 si riscrivono le ultime ~45-50 pesate. La colonna A è testo
 | B | `weight_kg` | `weight` | |
 | C | `bodyfat_pct` | `bodyfat` | % grasso |
 | D | `water_pct` | `water` | % acqua |
-| E | `muscle` | `muscle` | unità come nell'app Renpho, da confermare |
-| F | `bone` | `bone` | unità come nell'app Renpho, da confermare |
+| E | `muscle` | `muscle` | % muscoli (valori intorno a 42) |
+| F | `bone` | `bone` | kg di massa ossea (valori intorno a 3,2) |
 | G | `visfat` | `visfat` | livello di grasso viscerale |
 | H | `bmr_kcal` | `bmr` | metabolismo basale |
 | I | `bmi` | `bmi` | |

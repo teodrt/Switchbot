@@ -102,7 +102,7 @@ docs/schema-foglio.md     schede e colonne del foglio hub
 4. Import Garmin con la Personal API (`apps-script/garmin.gs`): fatto. Backfill di 90 giorni
    eseguito, trigger `garminDaily` attivo (ogni giorno alle 10). SpO2 notturna presente solo da
    metà novembre 2026 (Pulse Ox attivato da poco).
-5. Import Renpho con l'API non ufficiale (`apps-script/renpho.gs`): login e lettura verificati
-   con `renphoDebug`; backfill e trigger da eseguire.
+5. Import Renpho con l'API non ufficiale (`apps-script/renpho.gs`): fatto. Backfill eseguito
+   (172 giorni con pesata, dal 2018), trigger `renphoDaily` da attivare con `renphoSetup`.
 6. Dashboard definitiva: stanotte, la notte in un grafico, cosa influisce sul sonno, trend, corpo.
 7. Report settimanale automatico.
