@@ -1,7 +1,9 @@
 # Ritmo: la dashboard
 
-Web app Apps Script nello stesso progetto degli script di raccolta: `apps-script/dashboard.gs`
-(server) e `apps-script/ritmo.html` (pagina). Legge le tre schede del foglio hub a ogni apertura.
+Web app Apps Script nello stesso progetto degli script di raccolta. `apps-script/dashboard.gs` legge
+le tre schede del foglio a ogni apertura e passa i dati (`DATA`) a `apps-script/ritmo.html`, che è solo
+un caricatore: scarica l'interfaccia (`app/ritmo.js`, `app/ritmo.css`) dall'ultimo commit di `main`
+tramite jsDelivr. Per cambiare l'app basta un commit su `main`.
 
 ## Sezioni
 

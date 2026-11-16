@@ -22,7 +22,8 @@ prestazioni sportive e umore. Nomi su Google: script "Ritmo - Raccolta dati", fo
 |---|---|
 | Hub dei dati | Un foglio Google, una scheda per fonte (vedi `docs/schema-foglio.md`) |
 | Raccolta automatica | Apps Script con trigger temporali (`apps-script/`) |
-| App Ritmo | Web app Apps Script (`dashboard.gs` + `ritmo.html`), legge il foglio |
+| App Ritmo: dati | Web app Apps Script (`dashboard.gs` legge il foglio, `ritmo.html` è solo il caricatore) |
+| App Ritmo: interfaccia | `app/ritmo.js` + `app/ritmo.css`, caricati da jsDelivr dall'ultimo commit di `main` |
 | Codice e memoria del progetto | Questo repo |
 
 Claude Code non fa da hub: le sessioni non restano accese. Si usa una sessione quando serve
@@ -38,6 +39,16 @@ nell'editor di script.google.com, poi si controlla scaricandolo di nuovo.
 Tutti i file di `apps-script/` stanno nello stesso progetto Apps Script. Ogni funzione di setup
 cancella e ricrea **solo il proprio trigger** (filtrando per `getHandlerFunction()`), mai tutti.
 I nomi delle funzioni devono essere unici nel progetto: prefisso `g` per Garmin.
+
+## Pubblicare modifiche all'app
+
+- L'interfaccia (`app/ritmo.js`, `app/ritmo.css`) si carica a ogni apertura dall'ultimo commit di
+  `main`: il caricatore chiede lo SHA a api.github.com e usa `cdn.jsdelivr.net/gh/teodrt/Switchbot@<sha>`,
+  con ripiego su `@main`. Una modifica all'interfaccia è online appena arriva su `main`.
+- Prima del merge: provare con i dati reali (Node + Playwright) e aggiornare l'anteprima privata.
+- `apps-script/ritmo.html` e `dashboard.gs` cambiano di rado: l'utente li incolla e salva. Con il
+  link di test della web app (finisce con `/dev`, solo per il proprietario) non serve un nuovo deployment.
+- `DATA` arriva solo da Apps Script: nessun dato personale in `app/`.
 
 ## Garmin Personal API
 
@@ -92,7 +103,9 @@ apps-script/switchbot.gs  logger SwitchBot (ogni 10 minuti)
 apps-script/garmin.gs     import Garmin (ogni giorno alle 10)
 apps-script/renpho.gs     import Renpho (ogni giorno alle 11, API non ufficiale)
 apps-script/dashboard.gs  web app Ritmo: legge il foglio e prepara i dati (nBuild_ è pura, provabile in Node)
-apps-script/ritmo.html pagina della web app: grafica e motore di analisi
+apps-script/ritmo.html    caricatore della web app (DATA dal foglio + app da jsDelivr)
+app/ritmo.js              interfaccia dell'app e motore di analisi (pubblicata da main)
+app/ritmo.css             stile dell'app
 dashboard/README.md       sezioni della dashboard e regole del motore di analisi
 docs/schema-foglio.md     schede e colonne del foglio hub
 ```
@@ -108,7 +121,7 @@ docs/schema-foglio.md     schede e colonne del foglio hub
    metà novembre 2026 (Pulse Ox attivato da poco).
 5. Import Renpho con l'API non ufficiale (`apps-script/renpho.gs`): fatto. Backfill eseguito
    (172 giorni con pesata, dal 2018), trigger `renphoDaily` attivo (ogni giorno alle 11).
-6. App Ritmo (`dashboard.gs` + `ritmo.html`): distribuita come App web (Esegui come: me, Accesso:
-   solo io). Per aggiornarla: incollare i file, poi Gestisci deployment > Modifica > Nuova versione
-   (mantiene lo stesso link). Prossimi passi: umore (check-in), sport (carico di allenamento Garmin).
+6. App Ritmo: distribuita come App web (Esegui come: me, Accesso: solo io). Interfaccia separata
+   in `app/` e pubblicata da `main` (vedi "Pubblicare modifiche all'app"). Prossimi passi: umore
+   (check-in), sport (carico di allenamento Garmin).
 7. Report settimanale automatico.
