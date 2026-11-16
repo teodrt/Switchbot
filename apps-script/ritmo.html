@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<title>Ritmo</title>
+<style>
+  html, body { margin: 0; background: #0a0f1e; color: #eaeefa; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  @media (prefers-color-scheme: light) { html, body { background: #eef1f8; color: #111a2e; } }
+  .boot { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 10px; font-weight: 700; letter-spacing: .02em; }
+  .boot svg { width: 34px; height: 34px; }
+  .boot path { stroke: #a9bcff; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 60; stroke-dashoffset: 60; animation: b 1.2s ease-in-out infinite alternate; }
+  @keyframes b { to { stroke-dashoffset: 0; } }
+  .boot p { font-weight: 400; font-size: .85rem; opacity: .7; max-width: 280px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="boot" class="boot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 13h4l2.5-6 4 11 3-8 2 3H22"/></svg>Ritmo</div>
+<script>
+const DATA = <?!= json ?>;
+</script>
+<script>
+/* Caricatore: prende l'ultima versione dell'app dal ramo main del repo pubblico (via jsDelivr,
+   fissata all'ultimo commit per evitare la cache). I dati arrivano solo da qui (DATA), mai da GitHub.
+   Per cambiare la grafica basta un commit su main: niente da incollare, niente deployment. */
+(function () {
+  var REPO = 'teodrt/Switchbot', CDN = 'https://cdn.jsdelivr.net/gh/' + REPO + '@';
+  var started = false;
+  function fail() {
+    var b = document.getElementById('boot');
+    if (b) b.innerHTML += '<p>Non riesco a caricare l\'app. Controlla la connessione e riaprila.</p>';
+  }
+  function load(ref) {
+    var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = CDN + ref + '/app/ritmo.css';
+    document.head.appendChild(css);
+    var js = document.createElement('script'); js.src = CDN + ref + '/app/ritmo.js';
+    js.onerror = function () { if (ref !== 'main') load('main'); else fail(); };
+    document.head.appendChild(js);
+  }
+  function start(ref) { if (started) return; started = true; load(ref); }
+  setTimeout(function () { start('main'); }, 2500);
+  fetch('https://api.github.com/repos/' + REPO + '/commits/main', { headers: { Accept: 'application/vnd.github.sha' } })
+    .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+    .then(function (sha) { sha = sha.trim(); start(/^[0-9a-f]{40}$/.test(sha) ? sha : 'main'); })
+    .catch(function () { start('main'); });
+})();
+</script>
+</body>
+</html>
