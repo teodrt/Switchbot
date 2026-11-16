@@ -97,9 +97,11 @@ function logReading() {
   sheet.appendRow([ts].concat(meter, hub, [note.join(' | ')]));
 }
 
-/** Ricrea il trigger ogni 10 minuti e scrive subito una riga. */
+/** Ricrea solo il trigger di logReading (ogni 10 minuti) e scrive subito una riga. */
 function setup() {
-  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'logReading')
+    .forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('logReading').timeBased().everyMinutes(10).create();
   logReading();
 }

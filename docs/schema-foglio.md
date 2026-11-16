@@ -23,11 +23,37 @@ Storia: prima del collegamento all'Hub 2 (15/11/2026 16:39) le colonne B, C, E s
 e la CO2 in D è un valore vecchio dalla cache del cloud, da non usare nelle analisi.
 Le colonne F-I esistono dal 16/11/2026.
 
-## Scheda Garmin (da definire)
+## Scheda `Garmin`
 
-Da definire dopo il primo export da Garmin Connect. Candidati: data della notte,
-sleep score, durata, fasi (profondo, leggero, REM, sveglio), HRV notturna,
-battito a riposo, Body Battery, stress medio, passi.
+Una riga per data, scritta da `apps-script/garmin.gs` tramite la Garmin Personal API
+(Forerunner 255). Ogni mattina alle 10 si riscrivono gli ultimi 3 giorni. La data è quella
+del risveglio, come in Garmin Connect. La colonna A è testo (`yyyy-MM-dd`).
+
+| Col | Nome | Endpoint e campo |
+|---|---|---|
+| A | `date` | `calendarDate` |
+| B | `sleep_score` | sonno: `sleepScores.overall.value` (0-100) |
+| C | `sleep_h` | sonno: `sleepTimeSeconds` in ore |
+| D-G | `deep_min`, `light_min`, `rem_min`, `awake_min` | sonno: `deep/light/rem/awakeSleepSeconds` in minuti |
+| H | `awake_count` | sonno: `awakeCount` |
+| I-J | `bed_start`, `bed_end` | sonno: `sleepStart/EndTimestampLocal` (HH:mm) |
+| K | `sleep_hr_avg` | sonno: `avgHeartRate` |
+| L | `sleep_stress_avg` | sonno: `avgSleepStress` |
+| M | `resp_avg` | sonno: `averageRespirationValue` |
+| N | `spo2_avg` | sonno: `averageSpO2Value` |
+| O | `hrv_night_ms` | HRV: `lastNightAvg` |
+| P | `hrv_weekly_ms` | HRV: `weeklyAvg` |
+| Q | `hrv_status` | HRV: `status` |
+| R | `rhr` | riepilogo: `restingHeartRate` |
+| S-U | `bb_wake`, `bb_high`, `bb_low` | riepilogo: `bodyBatteryAtWakeTime/HighestValue/LowestValue` |
+| V | `stress_avg` | riepilogo: `averageStressLevel` |
+| W | `steps` | riepilogo: `totalSteps` |
+| X | `note` | errori o "nessun sonno registrato" |
+
+Endpoint (host `https://personal.connectapi.garmin.com`):
+`/sleep-service/sleep/dailySleepSummariesByDate`, `/hrv-service/hrv/daily/{from}/{to}`,
+`/usersummary-service/usersummary/daily`. L'API dà solo i totali per fase, non la sequenza
+delle fasi durante la notte.
 
 ## Scheda Renpho (da definire)
 

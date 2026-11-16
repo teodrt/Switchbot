@@ -33,6 +33,20 @@ Il connettore Google Drive permette a Claude di **leggere** il codice di uno scr
 ma non di modificarne il codice. Il codice in `apps-script/` va incollato a mano dall'utente
 nell'editor di script.google.com, poi si controlla scaricandolo di nuovo.
 
+Tutti i file di `apps-script/` stanno nello stesso progetto Apps Script. Ogni funzione di setup
+cancella e ricrea **solo il proprio trigger** (filtrando per `getHandlerFunction()`), mai tutti.
+I nomi delle funzioni devono essere unici nel progetto: prefisso `g` per Garmin.
+
+## Garmin Personal API
+
+- Chiave creata dall'utente su https://connect.garmin.com/app/settings/personalApiToken,
+  salvata nella proprietà `GARMIN_API_KEY`. L'utente non la incolla mai in chat.
+- Token: POST `/personalapitoken-service/personal-api/personal-api-key/token` con
+  `Authorization: ApiKey <chiave>`, dura 24 ore, nessun refresh token.
+- Dati: GET con `Authorization: Bearer <token>`. Intervalli al massimo 31 giorni.
+- Documentazione: https://developer.garmin.com/gc-developer-program/personal/swagger-docs/
+- Solo per uso personale, non commerciale.
+
 ## Dispositivi
 
 | Dispositivo | Tipo API | Dove | Note |
@@ -56,6 +70,7 @@ restituisce zeri e una CO2 vecchia.
 ```
 CLAUDE.md                 questo file
 apps-script/switchbot.gs  logger SwitchBot (ogni 10 minuti)
+apps-script/garmin.gs     import Garmin (ogni giorno alle 10)
 dashboard/                web app della dashboard (da costruire)
 docs/schema-foglio.md     schede e colonne del foglio hub
 ```
@@ -64,8 +79,9 @@ docs/schema-foglio.md     schede e colonne del foglio hub
 
 1. Logger SwitchBot con sensore camera e Hub 2: fatto.
 2. Spostare TOKEN, SECRET e SHEET_ID dal codice alle proprietà dello script (versione nel repo).
-3. Prototipo grafico della dashboard con dati SwitchBot veri e dati di esempio.
-4. Import Garmin (prima export CSV manuale, poi eventualmente automatico).
+3. Prototipo grafico della dashboard con dati SwitchBot veri e dati di esempio: fatto
+   (pagina privata su claude.ai, non nel repo perché contiene dati veri).
+4. Import Garmin con la Personal API (`apps-script/garmin.gs`): scritto, da provare.
 5. Import Renpho (export CSV).
 6. Dashboard definitiva: stanotte, la notte in un grafico, cosa influisce sul sonno, trend, corpo.
 7. Report settimanale automatico.
