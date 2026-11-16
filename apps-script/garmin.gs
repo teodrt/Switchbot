@@ -42,12 +42,29 @@ function garminToken_(force) {
       muteHttpExceptions: true });
   const code = res.getResponseCode();
   if (code !== 200) throw new Error('Garmin token HTTP ' + code + ': ' + res.getContentText().slice(0, 300));
-  const b = JSON.parse(res.getContentText());
-  const t = b.access_token || b.accessToken || b.token;
-  if (!t) throw new Error('Garmin token: risposta senza token. Campi: ' + Object.keys(b).join(', '));
-  const ttlMs = Number(b.expires_in || b.expiresIn || 86400) * 1000;
-  p.setProperties({ GARMIN_TOKEN: t, GARMIN_TOKEN_EXP: String(Date.now() + ttlMs) });
+  // Garmin risponde con il token (un JWT) come testo semplice; per sicurezza accetta anche JSON.
+  const body = res.getContentText().trim();
+  let t = body.replace(/^"|"$/g, '');
+  if (body.charAt(0) === '{') {
+    const b = JSON.parse(body);
+    t = b.access_token || b.accessToken || b.token;
+    if (!t) throw new Error('Garmin token: risposta senza token. Campi: ' + Object.keys(b).join(', '));
+  }
+  p.setProperties({ GARMIN_TOKEN: t, GARMIN_TOKEN_EXP: String(gjwtExp_(t) || Date.now() + 86400000) });
   return t;
+}
+
+/** Scadenza (ms) letta dal campo "exp" del JWT, oppure 0 se non si riesce a leggerla. */
+function gjwtExp_(jwt) {
+  try {
+    const part = jwt.split('.')[1];
+    const pad = part + '==='.slice((part.length + 3) % 4);
+    const json = Utilities.newBlob(Utilities.base64DecodeWebSafe(pad)).getDataAsString();
+    const exp = JSON.parse(json).exp;
+    return exp ? exp * 1000 : 0;
+  } catch (e) {
+    return 0;
+  }
 }
 
 /** GET autenticata. Restituisce il JSON, oppure null se Garmin risponde 204 (nessun dato). */
