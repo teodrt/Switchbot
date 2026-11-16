@@ -8,9 +8,10 @@
  * Proprietà gestite dallo script: GARMIN_TOKEN, GARMIN_TOKEN_EXP (token di accesso, dura 24 ore).
  *
  * Funzioni da eseguire a mano:
- *   garminDebug     prova: chiede il token e mostra nel log la forma delle risposte di ieri
- *   garminBackfill  importa gli ultimi 90 giorni
- *   garminSetup     crea il trigger giornaliero (ore 10) e importa gli ultimi 3 giorni
+ *   garminDebug               prova: chiede il token e mostra nel log la forma delle risposte di ieri
+ *   garminBackfill            importa gli ultimi 90 giorni di sonno e giornate
+ *   garminActivitiesBackfill  importa le attività sportive degli ultimi 3 anni (scheda "Attivita")
+ *   garminSetup               crea il trigger giornaliero (ore 10) e importa gli ultimi 3 giorni
  *
  * Documentazione: https://developer.garmin.com/gc-developer-program/personal/swagger-docs/
  */
@@ -154,6 +155,8 @@ function garminDaily() {
   const today = new Date();
   const from = new Date(today.getTime() - 2 * 86400000);
   garminImport_(gday_(from), gday_(today));
+  try { gActivities_(gday_(new Date(today.getTime() - 6 * 86400000)), gday_(today)); }
+  catch (e) { Logger.log('Attività: ' + e.message); }
 }
 
 /** Importa gli ultimi 90 giorni, a blocchi di 31 (limite dell'API). */
@@ -188,4 +191,66 @@ function garminDebug() {
   show('summary', u && {
     restingHeartRate: u.restingHeartRate, totalSteps: u.totalSteps, averageStressLevel: u.averageStressLevel,
     bodyBatteryAtWakeTime: u.bodyBatteryAtWakeTime, bodyBatteryHighestValue: u.bodyBatteryHighestValue });
+}
+
+// ---------------------------------------------------------------------------
+// Attività sportive: scheda "Attivita", una riga per attività (chiave activity_id).
+// Endpoint: /activitylist-service/activities/search/activities (paginato, max 100 per pagina).
+// ---------------------------------------------------------------------------
+
+const GARMIN_ACT_TAB = 'Attivita';
+const GARMIN_ACT_HEADER = ['activity_id', 'date', 'start', 'type', 'name', 'duration_min', 'distance_km',
+  'avg_hr', 'max_hr', 'calories', 'aerobic_te', 'anaerobic_te', 'training_load', 'vo2max',
+  'moderate_min', 'vigorous_min', 'elevation_m', 'te_label'];
+
+/** Scarica le attività con data di inizio tra start e end (yyyy-MM-dd) e le scrive nel foglio. */
+function gActivities_(start, end) {
+  const rows = [];
+  for (let page = 0; page < 30; page++) {
+    const res = garminGet_('/activitylist-service/activities/search/activities?startDate=' + start +
+      '&endDate=' + end + '&limit=100&start=' + (page * 100) + '&sortOrder=asc');
+    const list = Array.isArray(res) ? res : ((res && (res.activityList || res.activities || res.items)) || []);
+    list.forEach(a => {
+      const st = String(a.startTimeLocal || '');
+      const type = a.activityType && (a.activityType.typeKey || a.activityType.key) || '';
+      rows.push([String(a.activityId), st.slice(0, 10), st.slice(11, 16), type, a.activityName || '',
+        gnum_(typeof a.duration === 'number' ? a.duration / 60 : null, 1),
+        gnum_(typeof a.distance === 'number' ? a.distance / 1000 : null, 2),
+        gnum_(a.averageHR), gnum_(a.maxHR), gnum_(a.calories), gnum_(a.aerobicTrainingEffect, 1),
+        gnum_(a.anaerobicTrainingEffect, 1), gnum_(a.activityTrainingLoad, 1), gnum_(a.vO2MaxValue),
+        gnum_(a.moderateIntensityMinutes), gnum_(a.vigorousIntensityMinutes), gnum_(a.elevationGain), a.trainingEffectLabel || '']);
+    });
+    if (list.length < 100) break;
+  }
+  if (rows.length) gActWrite_(rows);
+  return rows.length;
+}
+
+function gActWrite_(rows) {
+  const ss = SpreadsheetApp.openById(gcfg_('SHEET_ID'));
+  const sh = ss.getSheetByName(GARMIN_ACT_TAB) || ss.insertSheet(GARMIN_ACT_TAB);
+  sh.getRange('A:C').setNumberFormat('@');
+  if (sh.getLastRow() === 0) sh.appendRow(GARMIN_ACT_HEADER);
+  const n = sh.getLastRow() - 1;
+  const ids = n > 0 ? sh.getRange(2, 1, n, 1).getDisplayValues().map(r => r[0]) : [];
+  const append = [];
+  rows.forEach(r => {
+    const i = ids.indexOf(r[0]);
+    if (i >= 0) sh.getRange(i + 2, 1, 1, r.length).setValues([r]);
+    else { append.push(r); ids.push(r[0]); }
+  });
+  if (append.length) sh.getRange(sh.getLastRow() + 1, 1, append.length, append[0].length).setValues(append);
+  if (sh.getLastRow() > 2) sh.getRange(2, 1, sh.getLastRow() - 1, GARMIN_ACT_HEADER.length).sort([{ column: 2 }, { column: 3 }]);
+}
+
+/** Importa le attività degli ultimi 3 anni, un anno alla volta. */
+function garminActivitiesBackfill() {
+  const now = new Date();
+  let total = 0;
+  for (let y = 3; y > 0; y--) {
+    const from = new Date(now.getTime() - y * 365 * 86400000);
+    const to = new Date(now.getTime() - (y - 1) * 365 * 86400000);
+    total += gActivities_(gday_(from), gday_(to));
+  }
+  Logger.log('Attività importate: ' + total);
 }

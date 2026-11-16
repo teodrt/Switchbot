@@ -76,6 +76,28 @@ Ogni giorno alle 11 si riscrivono le ultime ~45-50 pesate. La colonna A è testo
 
 La composizione corporea c'è solo nei giorni in cui la bilancia l'ha misurata.
 
+## Scheda `Attivita`
+
+Una riga per attività sportiva, scritta da `apps-script/garmin.gs` (`gActivities_`): ultimi 7 giorni
+ogni mattina con `garminDaily`, storico di 3 anni con `garminActivitiesBackfill`. Chiave: `activity_id`.
+
+Colonne: `activity_id`, `date`, `start` (HH:mm), `type` (typeKey Garmin, es. `running`), `name`,
+`duration_min`, `distance_km`, `avg_hr`, `max_hr`, `calories`, `aerobic_te`, `anaerobic_te`,
+`training_load`, `vo2max`, `moderate_min`, `vigorous_min`, `elevation_m`, `te_label`.
+
+## Scheda `Umore`
+
+Check-in giornaliero scritto dall'app (`ritmoSaveCheckin` in `dashboard.gs`), una riga per data.
+
+| Col | Nome | Valori |
+|---|---|---|
+| A | `date` | `yyyy-MM-dd` (testo) |
+| B | `time` | ora del salvataggio |
+| C | `energy` | 1-5 (scarico ... carico) |
+| D | `mood` | 1-5 (giù ... ottimo) |
+| E | `pain` | 0-10 |
+| F | `note` | testo libero, al massimo 280 caratteri |
+
 ## Regole
 
 - Le date usano sempre il fuso Europe/Madrid.
