@@ -1,0 +1,8 @@
+# Dati personali ed export: non vanno mai nel repo (repo pubblico)
+*.csv
+*.xlsx
+*.fit
+data/
+exports/
+.env
+*.secret
