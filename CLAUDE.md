@@ -81,7 +81,9 @@ docs/schema-foglio.md     schede e colonne del foglio hub
 2. Spostare TOKEN, SECRET e SHEET_ID dal codice alle proprietà dello script (versione nel repo).
 3. Prototipo grafico della dashboard con dati SwitchBot veri e dati di esempio: fatto
    (pagina privata su claude.ai, non nel repo perché contiene dati veri).
-4. Import Garmin con la Personal API (`apps-script/garmin.gs`): scritto, da provare.
+4. Import Garmin con la Personal API (`apps-script/garmin.gs`): fatto. Backfill di 90 giorni
+   eseguito, trigger `garminDaily` attivo (ogni giorno alle 10). SpO2 notturna presente solo da
+   metà novembre 2026 (Pulse Ox attivato da poco).
 5. Import Renpho (export CSV).
 6. Dashboard definitiva: stanotte, la notte in un grafico, cosa influisce sul sonno, trend, corpo.
 7. Report settimanale automatico.
