@@ -8,7 +8,8 @@
  */
 
 const N_TZ = 'Europe/Madrid';
-const N_DAYS = 120;   // notti mandate alla pagina
+const N_DAYS = 400;   // notti mandate alla pagina
+const N_RECENT_DAYS = 7;   // giorni di letture grezze di casa mandate alla pagina
 
 function doGet() {
   const t = HtmlService.createTemplateFromFile('ritmo');
@@ -55,7 +56,9 @@ function nBuild_(sbRows, gRows, rRows, now) {
     const rh = num(r[hs.rh_pct]);
     if (rh && rh > 0) {
       const p = { t: absMin(ts.slice(0, 10), ts.slice(11, 16)), ts: ts.slice(0, 16),
-        co2: num(r[hs.co2_ppm]), temp: num(r[hs.temp_c]), rh: rh, bat: num(r[hs.battery]) };
+        co2: num(r[hs.co2_ppm]), temp: num(r[hs.temp_c]), rh: rh, bat: num(r[hs.battery]),
+        htemp: hs.hub_temp_c === undefined ? null : num(r[hs.hub_temp_c]),
+        hrh: hs.hub_rh_pct === undefined ? null : num(r[hs.hub_rh_pct]) };
       air.push(p); latest = p;
     }
     if (hs.hub_rh_pct !== undefined && num(r[hs.hub_rh_pct])) {
@@ -143,7 +146,22 @@ function nBuild_(sbRows, gRows, rRows, now) {
   }
   body.sort((a, b) => (a.date < b.date ? -1 : 1));
 
+  // Curve di ogni notte con dati della camera (22:00-10:00): [minuti dalle 22, CO2, temperatura].
+  const nightSeries = {};
+  nights.forEach(n => {
+    if (!n.air) return;
+    const from = absMin(prevDay(n.date), '22:00'), to = absMin(n.date, '10:00');
+    const w = windowOf(n.date);
+    nightSeries[n.date] = { win: [w.start - from, w.end - from],
+      pts: air.filter(p => p.t >= from && p.t <= to).map(p => [p.t - from, p.co2, p.temp]) };
+  });
+  // Ultimi giorni di letture grezze di casa: [minuti assoluti, CO2, temp, umidità, temp e umidità seconda stanza].
+  const lastT = air.length ? air[air.length - 1].t : 0;
+  const recent = air.filter(p => p.t >= lastT - N_RECENT_DAYS * 1440)
+    .map(p => [p.t, p.co2, p.temp, p.rh, p.htemp, p.hrh]);
+
   return { now: now, last: last, series: series, win: win, nights: nights, body: body,
+    nightSeries: nightSeries, recent: recent,
     room: latest ? { ts: latest.ts, co2: latest.co2, temp: latest.temp, rh: latest.rh, bat: latest.bat } : null,
     hub: latestHub };
 }
