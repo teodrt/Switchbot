@@ -55,10 +55,26 @@ Endpoint (host `https://personal.connectapi.garmin.com`):
 `/usersummary-service/usersummary/daily`. L'API dà solo i totali per fase, non la sequenza
 delle fasi durante la notte.
 
-## Scheda Renpho (da definire)
+## Scheda `Renpho`
 
-Da definire dopo il primo export da Renpho Health. Candidati: data e ora della pesata,
-peso, % grasso, massa muscolare, % acqua.
+Una riga per giorno con una pesata (l'ultima del giorno), scritta da `apps-script/renpho.gs`
+tramite l'API cloud non ufficiale di Renpho Health, letta da un secondo account "amico".
+Ogni giorno alle 11 si riscrive l'ultimo mese. La colonna A è testo (`yyyy-MM-dd`).
+
+| Col | Nome | Parametro API | Note |
+|---|---|---|---|
+| A | `date` | `groupDay` | giorno della pesata, fuso Madrid |
+| B | `weight_kg` | `weight` | |
+| C | `bodyfat_pct` | `bodyfat` | % grasso |
+| D | `water_pct` | `water` | % acqua |
+| E | `muscle` | `muscle` | unità come nell'app Renpho, da confermare |
+| F | `bone` | `bone` | unità come nell'app Renpho, da confermare |
+| G | `visfat` | `visfat` | livello di grasso viscerale |
+| H | `bmr_kcal` | `bmr` | metabolismo basale |
+| I | `bmi` | `bmi` | |
+| J | `note` | | errori di un parametro, se ci sono |
+
+La composizione corporea c'è solo nei giorni in cui la bilancia l'ha misurata.
 
 ## Regole
 

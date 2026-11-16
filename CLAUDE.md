@@ -47,6 +47,18 @@ I nomi delle funzioni devono essere unici nel progetto: prefisso `g` per Garmin.
 - Documentazione: https://developer.garmin.com/gc-developer-program/personal/swagger-docs/
 - Solo per uso personale, non commerciale.
 
+## Renpho (API non ufficiale)
+
+- Nessuna API ufficiale. Protocollo da renpho-api (https://github.com/danvaneijck/renpho-api):
+  host `https://cloud.renpho.com/`, POST con corpo `{"encryptData": ...}` cifrato
+  AES-128-ECB + PKCS7 + base64, header `appVersion` 6.6.0 (dalla 8.0.0 il server usa un'altra
+  chiave e risponde -114).
+- Una sola sessione per account: lo script usa un **secondo account** amico dell'account
+  principale (endpoint `RenphoHealth/app/friend/...`), così l'app sul telefono non si disconnette.
+- Proprietà: `RENPHO_EMAIL`, `RENPHO_PASSWORD` (del secondo account), facoltativa `RENPHO_FRIEND_ID`.
+- AES scritto a mano in `renpho.gs` (Apps Script non lo ha), verificato col vettore FIPS-197
+  e con Node crypto. Login con email inventata verificato: risposta 106 "user does not exist".
+
 ## Dispositivi
 
 | Dispositivo | Tipo API | Dove | Note |
@@ -71,6 +83,7 @@ restituisce zeri e una CO2 vecchia.
 CLAUDE.md                 questo file
 apps-script/switchbot.gs  logger SwitchBot (ogni 10 minuti)
 apps-script/garmin.gs     import Garmin (ogni giorno alle 10)
+apps-script/renpho.gs     import Renpho (ogni giorno alle 11, API non ufficiale)
 dashboard/                web app della dashboard (da costruire)
 docs/schema-foglio.md     schede e colonne del foglio hub
 ```
@@ -84,6 +97,6 @@ docs/schema-foglio.md     schede e colonne del foglio hub
 4. Import Garmin con la Personal API (`apps-script/garmin.gs`): fatto. Backfill di 90 giorni
    eseguito, trigger `garminDaily` attivo (ogni giorno alle 10). SpO2 notturna presente solo da
    metà novembre 2026 (Pulse Ox attivato da poco).
-5. Import Renpho (export CSV).
+5. Import Renpho con l'API non ufficiale (`apps-script/renpho.gs`): scritto, da provare.
 6. Dashboard definitiva: stanotte, la notte in un grafico, cosa influisce sul sonno, trend, corpo.
 7. Report settimanale automatico.
