@@ -135,10 +135,12 @@ function rEncrypt_(obj) {
   return { encryptData: Utilities.base64Encode(rSigned_(RAES_.encrypt(plain, RENPHO_KEY))) };
 }
 
-function rDecrypt_(b64) {
+function rDecryptText_(b64) {
   const plain = RAES_.decrypt(rUnsigned_(Utilities.base64Decode(b64)), RENPHO_KEY);
-  return JSON.parse(Utilities.newBlob(rSigned_(plain)).getDataAsString('UTF-8'));
+  return Utilities.newBlob(rSigned_(plain)).getDataAsString('UTF-8');
 }
+
+function rDecrypt_(b64) { return JSON.parse(rDecryptText_(b64)); }
 
 // ---------- chiamate al server ----------
 
@@ -183,20 +185,23 @@ function rPost_(endpoint, payload, opts) {
     throw new Error('Renpho ' + endpoint + ' HTTP ' + http + ' codice ' + code + ': ' +
       (msg || res.getContentText() || '(risposta vuota)').slice(0, 300));
   }
-  return body.data ? rDecrypt_(body.data) : null;
+  if (!body.data) return null;
+  return opts.raw ? rDecryptText_(body.data) : rDecrypt_(body.data);
 }
 
 function renphoLogin_() {
-  const data = rPost_('renpho-aggregation/user/login', {
+  const text = rPost_('renpho-aggregation/user/login', {
     questionnaire: {},
     login: { password: rcfg_('RENPHO_PASSWORD'), areaCode: 'US', appRevision: RENPHO_APP_VERSION,
       cellphoneType: 'AppsScript', systemType: '11', email: rcfg_('RENPHO_EMAIL'), platform: 'android' },
     bindingList: { deviceTypes: RENPHO_DEVICE_TYPES }
-  }, { auth: false });
-  const login = (data && data.login) || {};
+  }, { auth: false, raw: true });
+  const login = (text && JSON.parse(text).login) || {};
   if (!login.token) throw new Error('Renpho: login senza token');
+  // L'id ha 19 cifre: oltre la precisione dei numeri JavaScript, quindi si legge dal testo.
+  const m = /"login"\s*:\s*\{[\s\S]*?"id"\s*:\s*"?(\d+)"?/.exec(text);
   PropertiesService.getScriptProperties().setProperties({
-    RENPHO_TOKEN: login.token, RENPHO_USER_ID: String(login.id) });
+    RENPHO_TOKEN: login.token, RENPHO_USER_ID: m ? m[1] : String(login.id) });
 }
 
 function rRecords_(d) {
@@ -303,6 +308,11 @@ function renphoDebug() {
   Logger.log('Amici: ' + JSON.stringify(friends.map(f => ({ userId: f.userId, accountName: f.accountName }))));
   if (!friends.length) return;
   const id = rFriendId_();
-  ['weight', 'bodyfat'].forEach(param =>
-    Logger.log(param + ': ' + JSON.stringify(rTrend_(id, param, 0).slice(-3))));
+  const now = Math.floor(Date.now() / 1000);
+  [0, now - 60 * 86400, now - 400 * 86400].forEach(end => {
+    const pts = rTrend_(id, 'weight', end);
+    const days = pts.map(p => p.groupDay).sort();
+    Logger.log('peso, finestra che finisce ' + (end ? Utilities.formatDate(new Date(end * 1000), RENPHO_TZ, 'yyyy-MM-dd') : 'adesso') +
+      ': ' + pts.length + ' pesate' + (days.length ? ', dalla ' + days[0] + ' alla ' + days[days.length - 1] : ''));
+  });
 }
