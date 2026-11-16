@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<title>Notturna</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Notturna. Una colonna per il telefono: la notte in apertura (anello del punteggio su cielo notturno),
+   poi cosa notare, i numeri, il grafico della notte, l'analisi dei dati, l'andamento e il corpo. */
+:root {
+  --bg: #0b1020; --sky-1: #121a36; --sky-2: #0b1020; --surface: #131b30; --surface-2: #1a2440; --line: #253152;
+  --fg: #e9edf8; --muted: #8f99b8; --accent: #a9bcff; --accent-2: #7fd8ea; --glow: rgba(140,160,255,.35);
+  --good: #62d6a8; --warn: #f1c56e; --bad: #f58585;
+  --band-good: rgba(98,214,168,.07); --band-warn: rgba(241,197,110,.09); --band-bad: rgba(245,133,133,.10);
+  --st-deep: #5d70e6; --st-light: #93a6f7; --st-rem: #7fd8ea; --st-awake: #f1c56e;
+  --star: rgba(255,255,255,.55);
+  --f-display: "Sora", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f1f3f9; --sky-1: #dfe5fb; --sky-2: #f1f3f9; --surface: #ffffff; --surface-2: #eef1f9; --line: #dbe0ee;
+  --fg: #121a2e; --muted: #5a6482; --accent: #3d56d4; --accent-2: #12829b; --glow: rgba(61,86,212,.18);
+  --good: #19976a; --warn: #a3720c; --bad: #cc4247;
+  --band-good: rgba(25,151,106,.07); --band-warn: rgba(163,114,12,.08); --band-bad: rgba(204,66,71,.08);
+  --st-deep: #3d56d4; --st-light: #8d9fe9; --st-rem: #12829b; --st-awake: #c68d1b;
+  --star: rgba(61,86,212,.25);
+  color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f1f3f9; --sky-1: #dfe5fb; --sky-2: #f1f3f9; --surface: #ffffff; --surface-2: #eef1f9; --line: #dbe0ee;
+  --fg: #121a2e; --muted: #5a6482; --accent: #3d56d4; --accent-2: #12829b; --glow: rgba(61,86,212,.18);
+  --good: #19976a; --warn: #a3720c; --bad: #cc4247;
+  --band-good: rgba(25,151,106,.07); --band-warn: rgba(163,114,12,.08); --band-bad: rgba(204,66,71,.08);
+  --st-deep: #3d56d4; --st-light: #8d9fe9; --st-rem: #12829b; --st-awake: #c68d1b;
+  --star: rgba(61,86,212,.25);
+  color-scheme: light; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.5; -webkit-text-size-adjust: 100%; }
+.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 30px;
+  padding-top: max(18px, env(safe-area-inset-top, 0px)); padding-bottom: max(40px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: 1.1rem; font-weight: 600; }
+h3 { font-size: .98rem; font-weight: 600; line-height: 1.35; }
+p { margin: 0; }
+.num { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+.eyebrow { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+.muted { color: var(--muted); }
+.small { font-size: .8rem; }
+section { display: grid; gap: 12px; }
+.sechead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+
+/* ---- apertura: cielo notturno con l'anello del punteggio ---- */
+.hero { position: relative; overflow: hidden; border-radius: 22px; padding: 18px 18px 20px; border: 1px solid var(--line);
+  background:
+    radial-gradient(1.2px 1.2px at 12% 22%, var(--star) 50%, transparent 51%),
+    radial-gradient(1px 1px at 28% 68%, var(--star) 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 46% 14%, var(--star) 50%, transparent 51%),
+    radial-gradient(1px 1px at 63% 40%, var(--star) 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 81% 18%, var(--star) 50%, transparent 51%),
+    radial-gradient(1px 1px at 91% 72%, var(--star) 50%, transparent 51%),
+    radial-gradient(1px 1px at 72% 86%, var(--star) 50%, transparent 51%),
+    radial-gradient(120% 90% at 85% -10%, var(--glow), transparent 60%),
+    linear-gradient(180deg, var(--sky-1), var(--sky-2)); }
+.hero-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.brand { font-family: var(--f-display); font-weight: 700; font-size: 1.05rem; letter-spacing: .02em; }
+.brand i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; background: var(--accent); box-shadow: 0 0 12px var(--accent); vertical-align: 1px; }
+.stamp { font-size: .74rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; background: color-mix(in srgb, var(--bg) 40%, transparent); }
+.hero-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center; margin-top: 14px; }
+.ring { width: 132px; height: 132px; position: relative; }
+.ring svg { width: 100%; height: 100%; }
+.ring .center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .score { font-family: var(--f-display); font-weight: 700; font-size: 2.6rem; line-height: 1; }
+.ring .lab { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-top: 4px; }
+.hero-text { display: grid; gap: 8px; min-width: 0; }
+.hero-text h1 { font-size: 1.45rem; font-weight: 600; line-height: 1.2; }
+.hero-text .verdict { font-size: .92rem; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: .76rem; border-radius: 999px; padding: 3px 9px; background: color-mix(in srgb, var(--surface-2) 75%, transparent); border: 1px solid var(--line); white-space: nowrap; }
+.chip b { font-family: var(--f-data); font-weight: 500; }
+@media (max-width: 420px) { .ring { width: 112px; height: 112px; } .ring .score { font-size: 2.2rem; } .hero-text h1 { font-size: 1.2rem; } }
+@media (prefers-reduced-motion: no-preference) { .ring .arc { transition: stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1); } }
+
+/* ---- riquadri ---- */
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 760px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 3px; align-content: start; min-width: 0; }
+.tile .label { font-size: .78rem; color: var(--muted); }
+.tile .value { font-family: var(--f-data); font-size: 1.5rem; font-weight: 500; line-height: 1.15; }
+.tile .value small { font-size: .78rem; color: var(--muted); font-weight: 400; margin-left: 3px; }
+.tile .sub { font-size: .76rem; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+.good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+.dot.good { background: var(--good); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); } .dot.none { background: var(--line); }
+
+/* ---- da notare ---- */
+.notes { display: grid; gap: 8px; }
+.note { display: grid; grid-template-columns: 4px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 12px 12px; }
+.note::before { content: ""; border-radius: 4px; background: var(--accent); }
+.note.bad::before { background: var(--bad); } .note.warn::before { background: var(--warn); } .note.good::before { background: var(--good); }
+.note p { font-size: .9rem; } .note .tip { color: var(--muted); font-size: .84rem; margin-top: 3px; }
+
+/* ---- pannelli e grafici ---- */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: var(--f-data); font-size: 10px; fill: var(--muted); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .75rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.stages { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--surface-2); gap: 2px; }
+.stages i { display: block; height: 100%; }
+.stagelist { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; font-size: .74rem; }
+.stagelist div { display: grid; gap: 1px; min-width: 0; }
+.stagelist b { font-family: var(--f-data); font-weight: 500; font-size: .95rem; }
+
+/* ---- analisi ---- */
+.findings { display: grid; gap: 10px; }
+@media (min-width: 760px) { .findings { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.find { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.find .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tag { font-size: .66rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; }
+.tag.good { background: color-mix(in srgb, var(--good) 15%, transparent); }
+.tag.bad { background: color-mix(in srgb, var(--bad) 15%, transparent); }
+.tag.neutral { color: var(--muted); border: 1px solid var(--line); }
+.find p { font-size: .86rem; color: var(--muted); }
+.bars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; }
+.bar { display: grid; gap: 4px; }
+.bar .col { height: 64px; display: flex; align-items: flex-end; }
+.bar .fill { width: 100%; border-radius: 6px 6px 2px 2px; background: color-mix(in srgb, var(--accent) 35%, transparent); }
+.bar.hi .fill { background: var(--accent); }
+.bar .v { font-family: var(--f-data); font-size: .9rem; }
+.bar .k { font-size: .7rem; color: var(--muted); line-height: 1.3; }
+.learning { display: grid; gap: 8px; }
+.learn { display: grid; gap: 5px; font-size: .82rem; }
+.learn .track { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.learn .track i { display: block; height: 100%; background: var(--accent-2); border-radius: 3px; }
+
+.trends { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 760px) { .trends { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.empty { font-size: .85rem; color: var(--muted); background: var(--surface-2); border-radius: 12px; padding: 12px; }
+footer { font-size: .76rem; color: var(--muted); display: grid; gap: 4px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+const DATA = <?!= json ?>;
+</script>
+<script>
+(function () {
+  'use strict';
+  const NS = 'http://www.w3.org/2000/svg';
+  const app = document.getElementById('app');
+  const fmt = (v, d) => (v === null || v === undefined || !isFinite(v)) ? '-' :
+    Number(v).toLocaleString('it-IT', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+  const el = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; };
+  const txt = (parent, x, y, s, anchor, style) => { const t = el('text', { x: x, y: y, 'text-anchor': anchor || 'start' }, parent); t.textContent = s; if (style) t.setAttribute('style', style); return t; };
+  const h = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html !== undefined) n.innerHTML = html; return n; };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const isNum = x => typeof x === 'number' && isFinite(x);
+  const avg = a => { const v = a.filter(isNum); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+  const median = a => { const v = a.filter(isNum).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
+  const sd = a => { const v = a.filter(isNum); if (v.length < 2) return null; const m = avg(v); return Math.sqrt(v.reduce((s, x) => s + (x - m) * (x - m), 0) / (v.length - 1)); };
+  const MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+  const dayLabel = d => +d.slice(8, 10) + ' ' + MESI[+d.slice(5, 7) - 1];
+  const hm = hrs => { const m = Math.round(hrs * 60); return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
+  const clock = m => { let x = Math.round(m); x = ((x % 1440) + 1440) % 1440; return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); };
+  const dow = d => new Date(d + 'T12:00:00Z').getUTCDay();
+  const addDays = (d, n) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+
+  const L = DATA.last;
+  const nights = DATA.nights || [];
+  const byDate = {}; nights.forEach(n => { byDate[n.date] = n; });
+  const before = L ? nights.filter(n => n.date < L.date) : nights;
+  const ref = before.slice(-30);
+  const avgOf = k => avg(ref.map(n => n[k]));
+  const hasG = L && isNum(L.score);
+  const A = L && L.air;
+  const bedMin = s => { if (!/^\d{2}:\d{2}$/.test(s || '')) return null; const m = +s.slice(0, 2) * 60 + +s.slice(3, 5); return m >= 720 ? m - 1440 : m; };
+
+  // =====================================================================================
+  // Motore di analisi
+  // =====================================================================================
+  let seed = 20261116;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const ranks = a => {
+    const idx = a.map((v, i) => [v, i]).sort((x, y) => x[0] - y[0]);
+    const r = new Array(a.length); let i = 0;
+    while (i < idx.length) { let j = i; while (j + 1 < idx.length && idx[j + 1][0] === idx[i][0]) j++; const rk = (i + j) / 2 + 1; for (let k = i; k <= j; k++) r[idx[k][1]] = rk; i = j + 1; }
+    return r;
+  };
+  const pearson = (x, y) => {
+    const n = x.length, mx = avg(x), my = avg(y); let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < n; i++) { const a = x[i] - mx, b = y[i] - my; sxy += a * b; sxx += a * a; syy += b * b; }
+    return sxx && syy ? sxy / Math.sqrt(sxx * syy) : 0;
+  };
+  // Correlazione di Spearman con p-value da test di permutazione (non assume distribuzioni normali).
+  const spearmanTest = (x, y, iters) => {
+    const rx = ranks(x), ry = ranks(y), rho = pearson(rx, ry);
+    const yy = ry.slice(); let hits = 0;
+    for (let t = 0; t < iters; t++) {
+      for (let i = yy.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const tmp = yy[i]; yy[i] = yy[j]; yy[j] = tmp; }
+      if (Math.abs(pearson(rx, yy)) >= Math.abs(rho) - 1e-12) hits++;
+    }
+    return { rho: rho, p: (hits + 1) / (iters + 1) };
+  };
+  // Differenza tra le medie di due gruppi, p-value per permutazione.
+  const diffTest = (a, b, iters) => {
+    const all = a.concat(b), na = a.length, obs = avg(a) - avg(b); let hits = 0;
+    for (let t = 0; t < iters; t++) {
+      for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const tmp = all[i]; all[i] = all[j]; all[j] = tmp; }
+      if (Math.abs(avg(all.slice(0, na)) - avg(all.slice(na))) >= Math.abs(obs) - 1e-12) hits++;
+    }
+    return { diff: obs, p: (hits + 1) / (iters + 1) };
+  };
+  // Benjamini-Hochberg: tiene i risultati con falso positivo atteso sotto q.
+  const fdr = (tests, q) => {
+    const s = tests.slice().sort((a, b) => a.p - b.p); const m = s.length; let k = -1;
+    s.forEach((t, i) => { if (t.p <= (i + 1) / m * q) k = i; });
+    return k < 0 ? [] : s.slice(0, k + 1);
+  };
+
+  // Fattori: cose che possono influire sulla notte. Niente componenti del punteggio stesso
+  // (durata, fasi, stress nel sonno), che correlerebbero col punteggio per costruzione.
+  const FACTORS = [
+    { id: 'bed', label: 'ora in cui ti addormenti', get: n => bedMin(n.bed_start), show: v => clock(v),
+      when: 'Quando ti addormenti tardi', hiP: v => 'ti addormenti dalle ' + clock(v) + ' in poi', loP: v => 'ti addormenti entro le ' + clock(v) },
+    { id: 'irreg', label: 'scarto dal tuo orario abituale', get: n => n._irreg, show: v => fmt(v) + ' min',
+      when: 'Quando cambi orario', hiP: v => 'ti addormenti almeno ' + fmt(v) + ' minuti fuori dal tuo orario solito', loP: v => 'resti entro ' + fmt(v) + ' minuti dal tuo orario' },
+    { id: 'steps', label: 'passi del giorno prima', get: n => { const p = byDate[addDays(n.date, -1)]; return p && isNum(p.steps) ? p.steps : null; }, show: v => fmt(v),
+      when: 'Dopo giornate più attive', hiP: v => 'il giorno prima fai almeno ' + fmt(v) + ' passi', loP: v => 'ne fai al massimo ' + fmt(v) },
+    { id: 'stress', label: 'stress del giorno prima', get: n => { const p = byDate[addDays(n.date, -1)]; return p && isNum(p.stress) ? p.stress : null; }, show: v => fmt(v),
+      when: 'Dopo giornate più stressanti', hiP: v => 'lo stress medio del giorno prima è almeno ' + fmt(v), loP: v => 'è al massimo ' + fmt(v) },
+    { id: 'co2', label: 'CO2 media in camera', get: n => n.air ? n.air.co2_avg : null, show: v => fmt(v) + ' ppm', room: true,
+      when: 'Con più CO2 in camera', hiP: v => 'la CO2 media della notte è almeno ' + fmt(v) + ' ppm', loP: v => 'è al massimo ' + fmt(v) + ' ppm' },
+    { id: 'temp', label: 'temperatura della camera', get: n => n.air ? n.air.temp_avg : null, show: v => fmt(v, 1) + ' °C', room: true,
+      when: 'Con la camera più calda', hiP: v => 'la camera è almeno a ' + fmt(v, 1) + ' °C', loP: v => 'è al massimo a ' + fmt(v, 1) + ' °C' },
+    { id: 'rh', label: 'umidità della camera', get: n => n.air ? n.air.rh_avg : null, show: v => fmt(v) + ' %', room: true,
+      when: 'Con aria più umida', hiP: v => 'l\'umidità è almeno al ' + fmt(v) + ' %', loP: v => 'è al massimo al ' + fmt(v) + ' %' },
+    { id: 'weekend', label: 'notti del weekend', get: n => { const w = dow(n.date); return w === 6 || w === 0 ? 1 : 0; }, binary: true, hiName: 'weekend', loName: 'in settimana',
+      when: 'Nel weekend' }
+  ];
+  const OUTCOMES = [
+    { id: 'score', label: 'sleep score', the: 'lo sleep score', get: n => n.score, dec: 0, unit: '', better: 1 },
+    { id: 'hrv', label: 'HRV notturna', the: "l'HRV notturna", get: n => n.hrv, dec: 0, unit: ' ms', better: 1 },
+    { id: 'rhr', label: 'battito a riposo', the: 'il battito a riposo', get: n => n.rhr, dec: 0, unit: ' bpm', better: -1 },
+    { id: 'bb', label: 'Body Battery al risveglio', the: 'il Body Battery al risveglio', get: n => n.bb_wake, dec: 0, unit: '', better: 1 },
+    { id: 'deep', label: 'sonno profondo', the: 'il sonno profondo', get: n => n.deep, dec: 0, unit: ' min', better: 1 }
+  ];
+
+  // Scarto dall'orario abituale: distanza dalla mediana delle 7 notti precedenti.
+  nights.forEach((n, i) => {
+    const b = bedMin(n.bed_start); if (b === null) return;
+    const prev = nights.slice(Math.max(0, i - 7), i).map(x => bedMin(x.bed_start)).filter(isNum);
+    if (prev.length >= 4) n._irreg = Math.abs(b - median(prev));
+  });
+
+  const MIN_N = 12, ITERS = 1500;
+  const tests = [], learning = [];
+  FACTORS.forEach(f => {
+    OUTCOMES.forEach(o => {
+      const pairs = nights.map(n => [f.get(n), o.get(n)]).filter(p => isNum(p[0]) && isNum(p[1]));
+      if (pairs.length < MIN_N) {
+        if (f.room && o.id === 'score') learning.push({ f: f, n: pairs.length });
+        return;
+      }
+      const xs = pairs.map(p => p[0]), ys = pairs.map(p => p[1]);
+      let t;
+      if (f.binary) {
+        const a = ys.filter((_, i) => xs[i] === 1), b = ys.filter((_, i) => xs[i] === 0);
+        if (a.length < 4 || b.length < 4) return;
+        const d = diffTest(a, b, ITERS);
+        t = { f: f, o: o, n: pairs.length, p: d.p, strength: Math.abs(d.diff) / (sd(ys) || 1),
+          groups: [{ k: f.loName, v: avg(b), n: b.length }, { k: f.hiName, v: avg(a), n: a.length, hi: true }], dir: Math.sign(d.diff) };
+      } else {
+        if (new Set(xs).size < 4) return;
+        const s = spearmanTest(xs, ys, ITERS);
+        const order = pairs.slice().sort((p, q) => p[0] - q[0]);
+        const k = Math.floor(order.length / 3);
+        const lo = order.slice(0, k), mid = order.slice(k, order.length - k), hi = order.slice(order.length - k);
+        t = { f: f, o: o, n: pairs.length, p: s.p, rho: s.rho, strength: Math.abs(s.rho), dir: Math.sign(s.rho),
+          cuts: [lo[lo.length - 1][0], hi[0][0]],
+          groups: [{ k: '≤ ' + f.show(lo[lo.length - 1][0]), v: avg(lo.map(p => p[1])), n: lo.length },
+                   { k: 'in mezzo', v: avg(mid.map(p => p[1])), n: mid.length },
+                   { k: '≥ ' + f.show(hi[0][0]), v: avg(hi.map(p => p[1])), n: hi.length, hi: true }] };
+      }
+      t.effect = t.groups[t.groups.length - 1].v - t.groups[0].v;
+      tests.push(t);
+    });
+  });
+  // Tiene solo ciò che regge alla correzione per confronti multipli e ha un effetto non trascurabile.
+  const perFactor = {};
+  const findings = fdr(tests, 0.1).filter(t => t.strength >= 0.25)
+    .sort((a, b) => (b.strength - a.strength) || (a.p - b.p))
+    .filter(t => (perFactor[t.f.id] = (perFactor[t.f.id] || 0) + 1) <= 2)   // al massimo 2 per fattore
+    .slice(0, 6);
+
+  // Trend: ultime 14 notti contro le 28 precedenti.
+  const trendTests = [];
+  OUTCOMES.concat([{ id: 'sleep_h', label: 'ore di sonno', get: n => n.sleep_h, dec: 1, unit: ' h', better: 1 }]).forEach(o => {
+    const g = nights.filter(n => isNum(o.get(n)));
+    if (g.length < 30) return;
+    const recent = g.slice(-14).map(o.get), prior = g.slice(-42, -14).map(o.get);
+    if (prior.length < 14) return;
+    const d = diffTest(recent, prior, ITERS);
+    const all = recent.concat(prior);
+    if (d.p < 0.05 && Math.abs(d.diff) >= 0.4 * (sd(all) || 1)) trendTests.push({ o: o, now: avg(recent), was: avg(prior), diff: d.diff, p: d.p });
+  });
+
+  // Peso: pendenza robusta (Theil-Sen) sugli ultimi 6 mesi.
+  const B = DATA.body || [];
+  let weightTrend = null;
+  if (B.length) {
+    const lim = addDays(B[B.length - 1].date, -183);
+    const w = B.filter(b => b.date >= lim);
+    if (w.length >= 6) {
+      const days = w.map(b => (Date.parse(b.date) - Date.parse(w[0].date)) / 86400000);
+      const slopes = [];
+      for (let i = 0; i < w.length; i++) for (let j = i + 1; j < w.length; j++) if (days[j] > days[i]) slopes.push((w[j].w - w[i].w) / (days[j] - days[i]));
+      const s = median(slopes);
+      if (s !== null) weightTrend = { perMonth: s * 30.4, n: w.length };
+    }
+  }
+
+  // Anomalie della notte: distanza dalla tua normalità (mediana e deviazione assoluta mediana, 60 notti).
+  const anomalies = [];
+  if (hasG) {
+    const base = before.slice(-60);
+    [{ k: 'resp', l: 'respirazione nel sonno', u: ' respiri/min', better: 0 }, { k: 'hr', l: 'battito medio nel sonno', u: ' bpm', better: -1 },
+     { k: 'rhr', l: 'battito a riposo', u: ' bpm', better: -1 }, { k: 'hrv', l: 'HRV notturna', u: ' ms', better: 1 },
+     { k: 'awake', l: 'minuti svegli', u: ' min', better: -1 }].forEach(m => {
+      const v = L[m.k], vals = base.map(n => n[m.k]).filter(isNum);
+      if (!isNum(v) || vals.length < 20) return;
+      const med = median(vals), mad = median(vals.map(x => Math.abs(x - med))) * 1.4826;
+      if (!mad) return;
+      const z = (v - med) / mad;
+      if (Math.abs(z) >= 2.5) anomalies.push({ m: m, v: v, med: med, z: z });
+    });
+  }
+  const recentBeds = nights.slice(-14).map(n => bedMin(n.bed_start)).filter(isNum);
+  const bedSpread = recentBeds.length >= 10 ? sd(recentBeds) : null;
+
+  // =====================================================================================
+  // Pagina
+  // =====================================================================================
+  if (!L) { app.appendChild(h('p', 'empty', 'Il foglio non ha ancora notti da mostrare.')); return; }
+  const sAvg = avgOf('score');
+
+  // ---------- apertura ----------
+  const scoreState = !hasG ? 'none' : L.score >= 80 ? 'good' : L.score >= 60 ? 'warn' : 'bad';
+  const quality = !hasG ? 'Sonno in arrivo alle 10' : L.score >= 90 ? 'Notte eccellente' : L.score >= 80 ? 'Buona notte' : L.score >= 60 ? 'Notte discreta' : 'Notte difficile';
+  let verdict = '';
+  if (hasG && sAvg !== null) verdict = (Math.abs(L.score - sAvg) < 3 ? 'In linea con la tua media (' + fmt(sAvg) + ').' :
+    fmt(Math.abs(L.score - sAvg)) + ' punti ' + (L.score < sAvg ? 'sotto' : 'sopra') + ' la tua media delle ultime 30 notti.');
+  if (A && A.over1000_min >= 120) verdict += ' Aria della camera viziata per buona parte della notte.';
+  const hero = h('section', 'hero');
+  hero.innerHTML = `<div class="hero-top"><span class="brand"><i></i>Notturna</span><span class="stamp">${GIORNI[dow(L.date)]} ${dayLabel(L.date)} · aggiornato ${esc(DATA.now.slice(11, 16))}</span></div>
+    <div class="hero-body">
+      <div class="ring" role="img" aria-label="Sleep score ${hasG ? L.score : 'non disponibile'}">
+        <svg viewBox="0 0 120 120"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="var(--line)" stroke-width="9"/>
+          <circle class="arc" cx="60" cy="60" r="50" fill="none" stroke="${scoreState === 'bad' ? 'var(--bad)' : scoreState === 'warn' ? 'var(--warn)' : 'url(#rg)'}" stroke-width="9" stroke-linecap="round"
+            stroke-dasharray="314.16" stroke-dashoffset="314.16" transform="rotate(-90 60 60)"/></svg>
+        <div class="center"><span class="score">${hasG ? fmt(L.score) : '-'}</span><span class="lab">sleep score</span></div>
+      </div>
+      <div class="hero-text"><h1>${quality}</h1><p class="verdict">${esc(verdict)}</p>
+        <div class="chips">${hasG ? `<span class="chip">sonno <b>${hm(L.sleep_h)}</b></span><span class="chip">HRV <b>${fmt(L.hrv)}</b> ms</span><span class="chip">riposo <b>${fmt(L.rhr)}</b> bpm</span>` : ''}${A ? `<span class="chip">CO2 <b>${fmt(A.co2_avg)}</b> ppm</span>` : ''}</div>
+      </div>
+    </div>`;
+  app.appendChild(hero);
+  const arc = hero.querySelector('.arc');
+  const target = 314.16 * (1 - (hasG ? Math.max(0, Math.min(100, L.score)) / 100 : 0));
+  requestAnimationFrame(() => requestAnimationFrame(() => { arc.setAttribute('stroke-dashoffset', target.toFixed(1)); }));
+  setTimeout(() => arc.setAttribute('stroke-dashoffset', target.toFixed(1)), 1500);   // anche senza animazioni
+
+  // ---------- da notare ----------
+  const noteList = [];
+  if (A && A.over1000_min >= 60) noteList.push({ s: 'bad', t: `La CO2 è rimasta <strong>sopra 1000 ppm per ${hm(A.over1000_min / 60)}</strong>, con un picco di <span class="num">${fmt(A.co2_max)}</span> ppm alle ${esc(A.co2_max_at)}.`, tip: 'Prova a lasciare la porta o la finestra socchiusa.' });
+  if (A && A.temp_avg > 20.5) noteList.push({ s: 'warn', t: `Camera a <span class="num">${fmt(A.temp_avg, 1)}</span> °C di media, sopra l'intervallo consigliato per dormire (17-20 °C).`, tip: A.temp_avg > 21.5 ? 'Abbassare il riscaldamento di uno o due gradi di notte aiuta il sonno profondo.' : '' });
+  anomalies.forEach(a => {
+    const worse = a.m.better === 0 ? true : (a.m.better > 0 ? a.z < 0 : a.z > 0);
+    noteList.push({ s: worse ? 'warn' : 'good', t: `Insolito: ${a.m.l} <span class="num">${fmt(a.v)}</span>${a.m.u}, ${a.z > 0 ? 'molto sopra' : 'molto sotto'} i tuoi soliti ${fmt(a.med)}.`,
+      tip: worse && (a.m.k === 'resp' || a.m.k === 'hr' || a.m.k === 'rhr') ? 'Succede con alcol, pasti tardi, allenamenti intensi o un inizio di malanno.' : '' });
+  });
+  if (bedSpread !== null && bedSpread > 60) noteList.push({ s: 'warn', t: `Orari irregolari: nelle ultime 2 settimane l'ora in cui ti addormenti varia di circa <span class="num">${fmt(bedSpread)}</span> minuti.`, tip: 'Orari regolari sono una delle leve più efficaci sulla qualità del sonno.' });
+  if (noteList.length) {
+    const s = h('section'); s.appendChild(h('div', 'sechead', '<h2>Da notare</h2>'));
+    const box = h('div', 'notes');
+    noteList.forEach(n => box.appendChild(h('div', 'note ' + n.s, `<div><p>${n.t}</p>${n.tip ? '<p class="tip">' + n.tip + '</p>' : ''}</div>`)));
+    s.appendChild(box); app.appendChild(s);
+  }
+
+  // ---------- numeri della notte ----------
+  const tile = (parent, o) => {
+    const d = h('div', 'tile');
+    d.innerHTML = `<span class="label">${o.label}</span><div class="value">${o.value}<small>${o.unit || ''}</small></div>
+      <div class="sub ${o.state || ''}"><i class="dot ${o.state || 'none'}"></i><span>${o.sub}</span></div>`;
+    parent.appendChild(d);
+  };
+  const level = (v, good, warn) => v <= good ? 'good' : v <= warn ? 'warn' : 'bad';
+  const later = 'Garmin arriva alle 10', noAir = 'nessun dato della camera';
+  const s1 = h('section');
+  s1.appendChild(h('div', 'sechead', `<h2>La notte in numeri</h2><span class="muted small">${hasG && L.bed_start ? 'addormentato ' + esc(L.bed_start) + ', sveglia ' + esc(L.bed_end) : ''}</span>`));
+  const tiles = h('div', 'tiles');
+  const rAvg = avgOf('rhr');
+  tile(tiles, { label: 'Durata', value: hasG ? hm(L.sleep_h) : '-', sub: hasG ? (L.awake_count ? L.awake_count + (L.awake_count === 1 ? ' risveglio' : ' risvegli') : 'nessun risveglio') : later, state: hasG ? (L.sleep_h >= 7 ? 'good' : L.sleep_h >= 6 ? 'warn' : 'bad') : '' });
+  const hs = { BALANCED: ['equilibrata', 'good'], UNBALANCED: ['sbilanciata', 'warn'], LOW: ['bassa', 'bad'] }[L.hrv_status] || ['sett. ' + fmt(L.hrv_week), ''];
+  tile(tiles, { label: 'HRV notturna', value: hasG ? fmt(L.hrv) : '-', unit: 'ms', sub: hasG ? hs[0] + ', sett. ' + fmt(L.hrv_week) : later, state: hasG ? hs[1] : '' });
+  tile(tiles, { label: 'FC a riposo', value: hasG ? fmt(L.rhr) : '-', unit: 'bpm', sub: hasG && rAvg !== null ? (Math.round(L.rhr - rAvg) === 0 ? 'come la tua media' : (L.rhr > rAvg ? '+' : '') + fmt(L.rhr - rAvg) + ' sulla media') : later, state: hasG && rAvg !== null ? (L.rhr <= rAvg + 1 ? 'good' : L.rhr <= rAvg + 3 ? 'warn' : 'bad') : '' });
+  tile(tiles, { label: 'Body Battery', value: hasG ? fmt(L.bb_wake) : '-', sub: hasG ? 'al risveglio, media ' + fmt(avgOf('bb_wake')) : later, state: hasG && isNum(L.bb_wake) ? (L.bb_wake >= 70 ? 'good' : L.bb_wake >= 45 ? 'warn' : 'bad') : '' });
+  tile(tiles, { label: 'CO2 media', value: A ? fmt(A.co2_avg) : '-', unit: 'ppm', sub: A ? (A.co2_avg <= 800 ? 'aria buona' : A.co2_avg <= 1000 ? 'discreta' : 'da ventilare') : noAir, state: A ? level(A.co2_avg, 800, 1000) : '' });
+  tile(tiles, { label: 'CO2 massima', value: A ? fmt(A.co2_max) : '-', unit: 'ppm', sub: A ? 'alle ' + esc(A.co2_max_at) : noAir, state: A ? level(A.co2_max, 800, 1000) : '' });
+  tile(tiles, { label: 'Temperatura', value: A ? fmt(A.temp_avg, 1) : '-', unit: '°C', sub: 'ideale 17-20', state: A ? ((A.temp_avg >= 17 && A.temp_avg <= 20) ? 'good' : (A.temp_avg >= 16 && A.temp_avg <= 22) ? 'warn' : 'bad') : '' });
+  tile(tiles, { label: 'Umidità', value: A ? fmt(A.rh_avg) : '-', unit: '%', sub: 'ideale 40-60', state: A ? ((A.rh_avg >= 40 && A.rh_avg <= 60) ? 'good' : (A.rh_avg >= 30 && A.rh_avg <= 70) ? 'warn' : 'bad') : '' });
+  s1.appendChild(tiles);
+  app.appendChild(s1);
+
+  // ---------- grafico della notte ----------
+  const X0 = 32, X1 = 352, SPAN = 720;
+  const xOf = m => X0 + (m / SPAN) * (X1 - X0);
+  const hours = [0, 120, 240, 360, 480, 600, 720];
+  const hourLabel = m => String((22 + m / 60) % 24).padStart(2, '0');
+  const s2 = h('section');
+  s2.appendChild(h('div', 'sechead', '<h2>La notte in un grafico</h2><span class="muted small">dalle 22 alle 10</span>'));
+  const p2 = h('div', 'panel');
+  const S = (DATA.series || []).filter(p => isNum(p[1]));
+  if (S.length >= 6) {
+    p2.appendChild(h('div', 'legend', '<span><i class="sw" style="background:var(--accent)"></i>CO2 (ppm)</span><span><i class="sw" style="background:var(--band-bad);border:1px solid var(--bad)"></i>sopra 1000</span><span><i class="sw" style="background:var(--band-warn);border:1px solid var(--warn)"></i>800-1000</span>'));
+    const c = el('svg', { viewBox: '0 0 360 172', role: 'img', 'aria-label': 'CO2 della camera durante la notte' }, p2);
+    const defs = el('defs', {}, c);
+    const gr = el('linearGradient', { id: 'cg', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    el('stop', { offset: 0, 'stop-color': 'var(--accent)', 'stop-opacity': .45 }, gr); el('stop', { offset: 1, 'stop-color': 'var(--accent)', 'stop-opacity': 0 }, gr);
+    const MIN = 300, MAX = Math.max(1400, Math.ceil(Math.max.apply(null, S.map(p => p[1])) / 200) * 200);
+    const Y0 = 150, Y1 = 10, y = v => Y0 - ((v - MIN) / (MAX - MIN)) * (Y0 - Y1);
+    el('rect', { x: X0, y: y(MAX), width: X1 - X0, height: y(1000) - y(MAX), fill: 'var(--band-bad)' }, c);
+    el('rect', { x: X0, y: y(1000), width: X1 - X0, height: y(800) - y(1000), fill: 'var(--band-warn)' }, c);
+    for (let v = 400; v <= MAX; v += 200) { if (v % 400 && v !== 1000) continue; el('line', { x1: X0, x2: X1, y1: y(v), y2: y(v), stroke: 'var(--line)', 'stroke-width': .6 }, c); txt(c, X0 - 4, y(v) + 3, v, 'end'); }
+    el('line', { x1: X0, x2: X1, y1: y(1000), y2: y(1000), stroke: 'var(--bad)', 'stroke-width': .7, 'stroke-dasharray': '3 3', 'stroke-opacity': .7 }, c);
+    hours.forEach(m => txt(c, xOf(m), 167, hourLabel(m), 'middle'));
+    if (DATA.win) {
+      const a = Math.max(0, DATA.win.start), b = Math.min(SPAN, DATA.win.end);
+      el('rect', { x: xOf(a), y: Y1, width: Math.max(0, xOf(b) - xOf(a)), height: Y0 - Y1, fill: 'none', stroke: 'var(--muted)', 'stroke-dasharray': '2 3', 'stroke-width': .6, rx: 3 }, c);
+      txt(c, xOf(a) + 4, Y1 + 11, DATA.win.fromGarmin ? 'a letto' : 'notte');
+    }
+    const pts = S.map(p => [xOf(p[0]), y(p[1])]);
+    const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    el('path', { d: line + ` L${pts[pts.length - 1][0].toFixed(1)},${Y0} L${pts[0][0].toFixed(1)},${Y0} Z`, fill: 'url(#cg)' }, c);
+    el('path', { d: line, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, c);
+    const pk = S.reduce((a, b) => (b[1] > a[1] ? b : a));
+    el('circle', { cx: xOf(pk[0]), cy: y(pk[1]), r: 6, fill: pk[1] > 1000 ? 'var(--bad)' : 'var(--accent)', 'fill-opacity': .25 }, c);
+    el('circle', { cx: xOf(pk[0]), cy: y(pk[1]), r: 3, fill: pk[1] > 1000 ? 'var(--bad)' : 'var(--accent)' }, c);
+    txt(c, Math.min(X1 - 14, Math.max(X0 + 14, xOf(pk[0]))), y(pk[1]) - 9, fmt(pk[1]), 'middle', 'fill:var(--fg)');
+
+    p2.appendChild(h('div', 'legend', '<span><i class="sw" style="background:var(--accent-2)"></i>Temperatura (°C)</span><span><i class="sw" style="background:var(--band-good);border:1px solid var(--good)"></i>17-20 °C ideale</span>'));
+    const t = el('svg', { viewBox: '0 0 360 82', role: 'img', 'aria-label': 'Temperatura della camera durante la notte' }, p2);
+    const temps = S.map(p => p[2]).filter(isNum);
+    const TMIN = Math.min(16, Math.floor(Math.min.apply(null, temps))), TMAX = Math.max(25, Math.ceil(Math.max.apply(null, temps)));
+    const TY0 = 62, TY1 = 6, ty = v => TY0 - ((v - TMIN) / (TMAX - TMIN)) * (TY0 - TY1);
+    el('rect', { x: X0, y: ty(20), width: X1 - X0, height: ty(17) - ty(20), fill: 'var(--band-good)' }, t);
+    [17, 20, TMAX - 1].forEach(v => { el('line', { x1: X0, x2: X1, y1: ty(v), y2: ty(v), stroke: 'var(--line)', 'stroke-width': .6 }, t); txt(t, X0 - 4, ty(v) + 3, v, 'end'); });
+    hours.forEach(m => txt(t, xOf(m), 77, hourLabel(m), 'middle'));
+    el('path', { d: S.filter(p => isNum(p[2])).map((p, i) => (i ? 'L' : 'M') + xOf(p[0]).toFixed(1) + ',' + ty(p[2]).toFixed(1)).join(' '), fill: 'none', stroke: 'var(--accent-2)', 'stroke-width': 2, 'stroke-linejoin': 'round' }, t);
+  } else {
+    p2.appendChild(h('p', 'empty', 'Nessuna lettura della camera per questa notte.'));
+  }
+  if (hasG && isNum(L.deep)) {
+    const st = [['deep', 'Profondo', '--st-deep'], ['light', 'Leggero', '--st-light'], ['rem', 'REM', '--st-rem'], ['awake', 'Sveglio', '--st-awake']];
+    const tot = st.reduce((s, k) => s + (L[k[0]] || 0), 0) || 1;
+    p2.appendChild(h('div', 'sechead', '<span class="eyebrow">Fasi del sonno</span><span class="muted small">totali Garmin</span>'));
+    p2.appendChild(h('div', 'stages', st.filter(k => L[k[0]] > 0).map(k => `<i style="flex:${L[k[0]]};background:var(${k[2]})"></i>`).join('')));
+    p2.appendChild(h('div', 'stagelist', st.map(k => `<div><span class="muted"><i class="sw" style="background:var(${k[2]})"></i> ${k[1]}</span><b>${fmt(L[k[0]])}′</b><span class="muted">media ${fmt(avgOf(k[0]))}′</span></div>`).join('')));
+  }
+  s2.appendChild(p2);
+  app.appendChild(s2);
+
+  // ---------- cosa dicono i tuoi dati ----------
+  const s3 = h('section');
+  const nG = nights.filter(n => isNum(n.score)).length;
+  s3.appendChild(h('div', 'sechead', `<h2>Cosa dicono i tuoi dati</h2><span class="muted small">${nG} notti analizzate</span>`));
+  const better = (o, dir) => (dir * o.better) > 0;
+  if (findings.length) {
+    const box = h('div', 'findings');
+    findings.forEach(t => {
+      const good = better(t.o, t.dir);
+      const lo = t.groups[0], hi = t.groups[t.groups.length - 1];
+      const strong = t.p < 0.01 && t.strength >= 0.4;
+      const title = `${t.f.when}: ${t.o.label} più ${t.dir > 0 ? 'alto' : 'basso'}` + (t.f.binary ? ` di ${fmt(Math.abs(t.effect), t.o.dec)}${t.o.unit}` : '');
+      const body = t.f.binary
+        ? `In media ${fmt(hi.v, t.o.dec)}${t.o.unit} nel ${t.f.hiName} (${hi.n} notti) contro ${fmt(lo.v, t.o.dec)}${t.o.unit} ${t.f.loName} (${lo.n}).`
+        : `Quando ${t.f.hiP(t.cuts[1])}, ${t.o.the || t.o.label} è in media ${fmt(hi.v, t.o.dec)}${t.o.unit}; quando ${t.f.loP(t.cuts[0])}, ${fmt(lo.v, t.o.dec)}${t.o.unit}.`;
+      const vmax = Math.max.apply(null, t.groups.map(g => g.v)), vmin = Math.min.apply(null, t.groups.map(g => g.v));
+      const hgt = v => 22 + 78 * ((v - vmin) / ((vmax - vmin) || 1));
+      const bars = `<div class="bars" style="grid-template-columns:repeat(${t.groups.length},minmax(0,1fr))">${t.groups.map(g =>
+        `<div class="bar${g.hi ? ' hi' : ''}"><span class="v">${fmt(g.v, t.o.dec)}</span><div class="col"><div class="fill" style="height:${hgt(g.v).toFixed(0)}%"></div></div><span class="k">${esc(g.k)}<br>${g.n} notti</span></div>`).join('')}</div>`;
+      box.appendChild(h('div', 'find', `<div class="meta"><span class="tag ${good ? 'good' : 'bad'}">${good ? 'ti aiuta' : 'ti penalizza'}</span><span class="tag neutral">${strong ? 'evidenza forte' : 'evidenza moderata'}</span><span class="tag neutral">${t.n} notti</span></div>
+        <h3>${esc(title)}</h3>${bars}<p>${esc(body)}</p>`));
+    });
+    s3.appendChild(box);
+    s3.appendChild(h('p', 'muted small', 'Sono associazioni, non prove di causa. Ogni risultato è verificato con un test di permutazione e corretto per i confronti multipli: quelli deboli o probabilmente casuali non compaiono.'));
+  } else {
+    s3.appendChild(h('p', 'empty', `Per ora nessuna relazione abbastanza solida tra i fattori misurati e il tuo sonno su ${nG} notti. Ne compariranno qui man mano che i dati crescono.`));
+  }
+  if (trendTests.length || weightTrend) {
+    const p = h('div', 'panel');
+    p.appendChild(h('span', 'eyebrow', 'Tendenze recenti'));
+    const list = h('div', 'notes');
+    trendTests.forEach(tt => {
+      const good = (tt.diff * tt.o.better) > 0;
+      list.appendChild(h('div', 'note ' + (good ? 'good' : 'warn'), `<div><p><strong>${tt.o.label.charAt(0).toUpperCase() + tt.o.label.slice(1)} ${tt.diff > 0 ? 'in aumento' : 'in calo'}</strong>: <span class="num">${fmt(tt.now, tt.o.dec)}</span>${tt.o.unit} nelle ultime 2 settimane contro ${fmt(tt.was, tt.o.dec)}${tt.o.unit} nelle 4 precedenti.</p></div>`));
+    });
+    if (weightTrend && Math.abs(weightTrend.perMonth) >= 0.2) {
+      const up = weightTrend.perMonth > 0;
+      list.appendChild(h('div', 'note ' + (up ? 'warn' : 'good'), `<div><p><strong>Peso ${up ? 'in aumento' : 'in calo'}</strong> di circa <span class="num">${fmt(Math.abs(weightTrend.perMonth), 1)}</span> kg al mese negli ultimi 6 mesi (${weightTrend.n} pesate, stima robusta agli sbalzi).</p></div>`));
+    } else if (weightTrend) {
+      list.appendChild(h('div', 'note good', `<div><p><strong>Peso stabile</strong> negli ultimi 6 mesi (${weightTrend.n} pesate).</p></div>`));
+    }
+    p.appendChild(list); s3.appendChild(p);
+  }
+  if (learning.length) {
+    const p = h('div', 'panel');
+    p.appendChild(h('div', 'sechead', `<span class="eyebrow">Sto ancora imparando</span><span class="muted small">servono almeno ${MIN_N} notti</span>`));
+    const box = h('div', 'learning');
+    learning.forEach(l => box.appendChild(h('div', 'learn', `<span>Effetto della ${esc(l.f.label)} sul sonno: <span class="num">${l.n}</span> di ${MIN_N} notti</span><div class="track"><i style="width:${Math.min(100, 100 * l.n / MIN_N).toFixed(0)}%"></i></div>`)));
+    p.appendChild(box); s3.appendChild(p);
+  }
+  app.appendChild(s3);
+
+  // ---------- andamento ----------
+  const s4 = h('section');
+  s4.appendChild(h('div', 'sechead', '<h2>Andamento</h2><span class="muted small">ultime 30 notti</span>'));
+  const tr = h('div', 'trends');
+  const spark = (parent, label, data, dec, unit) => {
+    const vals = data.filter(isNum);
+    const d = h('div', 'tile');
+    d.innerHTML = `<span class="label">${label}</span><div class="value">${vals.length ? fmt(vals[vals.length - 1], dec) : '-'}<small>${unit}</small></div>`;
+    if (vals.length >= 2) {
+      const svg = el('svg', { viewBox: '0 0 120 40', role: 'img', 'aria-label': label + ', andamento' });
+      const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), m = avg(vals);
+      const px = i => 2 + i * (116 / (vals.length - 1)), py = v => 34 - ((v - mn) / ((mx - mn) || 1)) * 30;
+      el('line', { x1: 2, x2: 118, y1: py(m), y2: py(m), stroke: 'var(--muted)', 'stroke-width': .6, 'stroke-dasharray': '2 3' }, svg);
+      const pts = vals.map((v, i) => px(i).toFixed(1) + ',' + py(v).toFixed(1));
+      el('polyline', { points: pts.join(' '), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 1.5, 'stroke-linejoin': 'round' }, svg);
+      el('circle', { cx: px(vals.length - 1), cy: py(vals[vals.length - 1]), r: 2.8, fill: 'var(--accent)' }, svg);
+      d.appendChild(svg);
+      d.appendChild(h('div', 'sub muted', 'media ' + fmt(m, dec) + (unit ? ' ' + unit : '') + ' (tratteggio)'));
+    }
+    parent.appendChild(d);
+  };
+  const last30 = nights.filter(n => isNum(n.score)).slice(-30);
+  spark(tr, 'Sleep score', last30.map(n => n.score), 0, '');
+  spark(tr, 'HRV notturna', last30.map(n => n.hrv), 0, 'ms');
+  spark(tr, 'FC a riposo', last30.map(n => n.rhr), 0, 'bpm');
+  spark(tr, 'Ore di sonno', last30.map(n => n.sleep_h), 1, 'h');
+  s4.appendChild(tr);
+  app.appendChild(s4);
+
+  // ---------- corpo ----------
+  if (B.length) {
+    const s5 = h('section');
+    const lb = B[B.length - 1];
+    s5.appendChild(h('div', 'sechead', `<h2>Corpo</h2><span class="muted small">ultima pesata ${dayLabel(lb.date)} ${lb.date.slice(0, 4)}</span>`));
+    const bt = h('div', 'tiles');
+    const lim = addDays(lb.date, -365);
+    const old = B.filter(b => b.date <= lim); const y1 = old.length ? old[old.length - 1] : null;
+    const dW = y1 ? lb.w - y1.w : null, dF = y1 && isNum(y1.fat) && isNum(lb.fat) ? lb.fat - y1.fat : null;
+    tile(bt, { label: 'Peso', value: fmt(lb.w, 1), unit: 'kg', sub: dW === null ? 'primo anno di dati' : (dW > 0 ? '+' : '') + fmt(dW, 1) + ' kg in un anno', state: dW === null ? '' : dW <= 0 ? 'good' : dW <= 2 ? 'warn' : 'bad' });
+    tile(bt, { label: 'Grasso', value: fmt(lb.fat, 1), unit: '%', sub: dF === null ? '' : (dF > 0 ? '+' : '') + fmt(dF, 1) + ' in un anno', state: dF === null ? '' : dF <= 0 ? 'good' : dF <= 1 ? 'warn' : 'bad' });
+    tile(bt, { label: 'Muscoli', value: fmt(lb.muscle, 1), unit: '%', sub: 'acqua ' + fmt(lb.water, 1) + ' %', state: '' });
+    tile(bt, { label: 'BMI', value: fmt(lb.bmi, 1), unit: '', sub: 'grasso viscerale ' + fmt(lb.visfat), state: !isNum(lb.bmi) ? '' : lb.bmi < 25 ? 'good' : lb.bmi < 30 ? 'warn' : 'bad' });
+    s5.appendChild(bt);
+    const p5 = h('div', 'panel');
+    p5.appendChild(h('div', 'legend', `<span><i class="sw" style="background:var(--accent)"></i>Peso (kg), ${B.length} pesate dal ${B[0].date.slice(0, 4)}</span>`));
+    const c = el('svg', { viewBox: '0 0 360 150', role: 'img', 'aria-label': 'Andamento del peso' }, p5);
+    const defs = el('defs', {}, c);
+    const gr = el('linearGradient', { id: 'wg', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    el('stop', { offset: 0, 'stop-color': 'var(--accent)', 'stop-opacity': .3 }, gr); el('stop', { offset: 1, 'stop-color': 'var(--accent)', 'stop-opacity': 0 }, gr);
+    const t0 = Date.parse(B[0].date), t1 = Date.parse(lb.date);
+    const ws = B.map(b => b.w), wmin = Math.floor(Math.min.apply(null, ws) - 1), wmax = Math.ceil(Math.max.apply(null, ws) + 1);
+    const Lx = 32, R = 352, T = 8, Bt = 128;
+    const x = d => Lx + ((Date.parse(d) - t0) / ((t1 - t0) || 1)) * (R - Lx), y = v => Bt - ((v - wmin) / (wmax - wmin)) * (Bt - T);
+    const step = Math.max(1, Math.round((wmax - wmin) / 4));
+    for (let v = wmin; v <= wmax; v += step) { el('line', { x1: Lx, x2: R, y1: y(v), y2: y(v), stroke: 'var(--line)', 'stroke-width': .6 }, c); txt(c, Lx - 4, y(v) + 3, v, 'end'); }
+    const y0 = +B[0].date.slice(0, 4), yN = +lb.date.slice(0, 4), ystep = Math.max(1, Math.ceil((yN - y0) / 6));
+    for (let yy = y0 + 1; yy <= yN; yy += ystep) txt(c, x(yy + '-01-01'), 144, String(yy), 'middle');
+    // media mobile su 5 pesate, per leggere la tendenza sotto il rumore della bilancia
+    const sm = B.map((b, i) => avg(B.slice(Math.max(0, i - 2), i + 3).map(z => z.w)));
+    const path = B.map((b, i) => (i ? 'L' : 'M') + x(b.date).toFixed(1) + ',' + y(sm[i]).toFixed(1)).join(' ');
+    el('path', { d: path + ` L${x(lb.date).toFixed(1)},${Bt} L${x(B[0].date).toFixed(1)},${Bt} Z`, fill: 'url(#wg)' }, c);
+    B.forEach(b => el('circle', { cx: x(b.date), cy: y(b.w), r: 1.5, fill: 'var(--muted)', 'fill-opacity': .6 }, c));
+    el('path', { d: path, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }, c);
+    el('circle', { cx: x(lb.date), cy: y(lb.w), r: 3.4, fill: 'var(--accent)', stroke: 'var(--surface)', 'stroke-width': 1.5 }, c);
+    p5.appendChild(h('p', 'muted small', 'Linea: media delle pesate vicine. Punti: singole pesate.'));
+    s5.appendChild(p5);
+    app.appendChild(s5);
+  }
+
+  // ---------- fonti ----------
+  app.appendChild(h('footer', '', `<span><strong>Fonti.</strong> Camera: SwitchBot Meter Pro CO2, una lettura ogni 10 minuti${DATA.room ? ' (adesso ' + fmt(DATA.room.co2) + ' ppm, ' + fmt(DATA.room.temp, 1) + ' °C)' : ''}${DATA.hub ? '; seconda stanza ' + fmt(DATA.hub.temp, 1) + ' °C' : ''}. Sonno e attività: Garmin, ogni giorno alle 10. Corpo: Renpho, ogni giorno alle 11.</span>
+    <span>Soglie CO2: sotto 800 bene, 800-1000 discreto, sopra 1000 da ventilare.${DATA.room && isNum(DATA.room.bat) && DATA.room.bat < 20 ? ' <strong class="bad">Batteria del sensore in camera al ' + fmt(DATA.room.bat) + ' %.</strong>' : ''}</span>`));
+})();
+</script>
+</body>
+</html>
