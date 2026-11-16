@@ -92,7 +92,7 @@ apps-script/switchbot.gs  logger SwitchBot (ogni 10 minuti)
 apps-script/garmin.gs     import Garmin (ogni giorno alle 10)
 apps-script/renpho.gs     import Renpho (ogni giorno alle 11, API non ufficiale)
 apps-script/dashboard.gs  web app Ritmo: legge il foglio e prepara i dati (nBuild_ è pura, provabile in Node)
-apps-script/dashboard.html pagina della web app: grafica e motore di analisi
+apps-script/ritmo.html pagina della web app: grafica e motore di analisi
 dashboard/README.md       sezioni della dashboard e regole del motore di analisi
 docs/schema-foglio.md     schede e colonne del foglio hub
 ```
@@ -108,6 +108,6 @@ docs/schema-foglio.md     schede e colonne del foglio hub
    metà novembre 2026 (Pulse Ox attivato da poco).
 5. Import Renpho con l'API non ufficiale (`apps-script/renpho.gs`): fatto. Backfill eseguito
    (172 giorni con pesata, dal 2018), trigger `renphoDaily` attivo (ogni giorno alle 11).
-6. Dashboard definitiva (`dashboard.gs` + `dashboard.html`): scritta e provata con i dati reali
+6. Dashboard definitiva (`dashboard.gs` + `ritmo.html`): scritta e provata con i dati reali
    in Node e Playwright; da distribuire come App web (Esegui come: me, Accesso: solo io).
 7. Report settimanale automatico.

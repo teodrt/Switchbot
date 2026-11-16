@@ -3,14 +3,15 @@
  * Si apre con il link della distribuzione "App web" (Esegui come: me, Accesso: solo io).
  *
  * Proprietà dello script richieste: SHEET_ID.
- * File HTML richiesto nello stesso progetto: "dashboard" (apps-script/dashboard.html).
+ * File HTML richiesto nello stesso progetto: "ritmo" (apps-script/ritmo.html). Non può chiamarsi
+ * "dashboard": Apps Script non accetta un file Script e uno HTML con lo stesso nome.
  */
 
 const N_TZ = 'Europe/Madrid';
 const N_DAYS = 120;   // notti mandate alla pagina
 
 function doGet() {
-  const t = HtmlService.createTemplateFromFile('dashboard');
+  const t = HtmlService.createTemplateFromFile('ritmo');
   t.json = JSON.stringify(nData_()).replace(/</g, '\\u003c');
   return t.evaluate()
     .setTitle('Ritmo')
