@@ -102,7 +102,9 @@ CLAUDE.md                 questo file
 apps-script/switchbot.gs  logger SwitchBot (ogni 10 minuti)
 apps-script/garmin.gs     import Garmin (ogni giorno alle 10)
 apps-script/renpho.gs     import Renpho (ogni giorno alle 11, API non ufficiale)
-apps-script/dashboard.gs  web app Ritmo: legge il foglio e prepara i dati (nBuild_ è pura, provabile in Node)
+apps-script/dashboard.gs  web app Ritmo: legge il foglio e prepara i dati (nBuild_ è pura, provabile in Node);
+                          ritmoSaveCheckin salva il check-in (chiamata dall'app con google.script.run)
+apps-script/report.gs     report settimanale via email (lunedì 8:40), wkBuild_ è pura
 apps-script/ritmo.html    caricatore della web app (DATA dal foglio + app da jsDelivr)
 app/ritmo.js              interfaccia dell'app e motore di analisi (pubblicata da main)
 app/ritmo.css             stile dell'app
@@ -122,6 +124,7 @@ docs/schema-foglio.md     schede e colonne del foglio hub
 5. Import Renpho con l'API non ufficiale (`apps-script/renpho.gs`): fatto. Backfill eseguito
    (172 giorni con pesata, dal 2018), trigger `renphoDaily` attivo (ogni giorno alle 11).
 6. App Ritmo: distribuita come App web (Esegui come: me, Accesso: solo io). Interfaccia separata
-   in `app/` e pubblicata da `main` (vedi "Pubblicare modifiche all'app"). Prossimi passi: umore
-   (check-in), sport (carico di allenamento Garmin).
-7. Report settimanale automatico.
+   in `app/` e pubblicata da `main` (vedi "Pubblicare modifiche all'app").
+7. v3 (16/11/2026): check-in (energia, umore, dolore, scheda `Umore`), sport (attività Garmin,
+   scheda `Attivita`, carico 7 g contro 28 g, VO2 max), report settimanale via email e in app,
+   interfaccia rifatta (colori per sezione, timeline del sonno, schede dal basso, carosello di insight).

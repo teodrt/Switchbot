@@ -25,8 +25,62 @@ function nData_() {
   const ss = SpreadsheetApp.openById(id);
   const fmt = v => (v instanceof Date) ? Utilities.formatDate(v, N_TZ, 'yyyy-MM-dd HH:mm') : v;
   const vals = sh => sh ? sh.getDataRange().getValues().map(r => [fmt(r[0])].concat(r.slice(1))) : [];
-  return nBuild_(vals(ss.getSheets()[0]), vals(ss.getSheetByName('Garmin')),
+  const out = nBuild_(vals(ss.getSheets()[0]), vals(ss.getSheetByName('Garmin')),
     vals(ss.getSheetByName('Renpho')), Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd HH:mm'));
+  out.activities = nActivities_(vals(ss.getSheetByName('Attivita')));
+  out.mood = nMood_(vals(ss.getSheetByName(N_MOOD_TAB)));
+  return out;
+}
+
+const N_MOOD_TAB = 'Umore';
+const N_MOOD_HEADER = ['date', 'time', 'energy', 'mood', 'pain', 'note'];
+
+/** Attività sportive (scheda "Attivita"): [data, ora, tipo, nome, minuti, km, FC media, FC max, kcal, TE aerobico, TE anaerobico, carico, VO2max]. */
+function nActivities_(rows) {
+  if (rows.length < 2) return [];
+  const h = {}; rows[0].forEach((n, i) => { h[String(n).trim()] = i; });
+  const num = v => (typeof v === 'number' && isFinite(v)) ? v : (typeof v === 'string' && v.trim() !== '' && isFinite(+v.replace(',', '.')) ? +v.replace(',', '.') : null);
+  const str = v => (v instanceof Date) ? Utilities.formatDate(v, N_TZ, 'yyyy-MM-dd') : String(v || '');
+  return rows.slice(1).filter(r => /^\d{4}-\d{2}-\d{2}/.test(str(r[h.date]))).map(r => [
+    str(r[h.date]).slice(0, 10), String(r[h.start] || '').slice(0, 5), String(r[h.type] || ''), String(r[h.name] || '').slice(0, 60),
+    num(r[h.duration_min]), num(r[h.distance_km]), num(r[h.avg_hr]), num(r[h.max_hr]), num(r[h.calories]),
+    num(r[h.aerobic_te]), num(r[h.anaerobic_te]), num(r[h.training_load]), num(r[h.vo2max])]);
+}
+
+/** Check-in (scheda "Umore"): una riga per giorno. */
+function nMood_(rows) {
+  if (rows.length < 2) return [];
+  const h = {}; rows[0].forEach((n, i) => { h[String(n).trim()] = i; });
+  const str = v => (v instanceof Date) ? Utilities.formatDate(v, N_TZ, 'yyyy-MM-dd') : String(v || '');
+  const num = v => (typeof v === 'number' && isFinite(v)) ? v : null;
+  return rows.slice(1).filter(r => /^\d{4}-\d{2}-\d{2}$/.test(str(r[h.date]))).map(r => ({
+    date: str(r[h.date]), time: String(r[h.time] || ''), energy: num(r[h.energy]), mood: num(r[h.mood]),
+    pain: num(r[h.pain]), note: String(r[h.note] || '').slice(0, 280) }));
+}
+
+/**
+ * Salva il check-in del giorno (chiamata dall'app con google.script.run).
+ * Una riga per data: se esiste già la aggiorna. Restituisce la riga salvata.
+ */
+function ritmoSaveCheckin(c) {
+  const day = Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd');
+  const date = (c && /^\d{4}-\d{2}-\d{2}$/.test(c.date || '')) ? c.date : day;
+  const int = (v, a, b) => { const x = Math.round(Number(v)); return isFinite(x) && x >= a && x <= b ? x : ''; };
+  const row = [date, Utilities.formatDate(new Date(), N_TZ, 'HH:mm'), int(c && c.energy, 1, 5), int(c && c.mood, 1, 5),
+    int(c && c.pain, 0, 10), String((c && c.note) || '').replace(/[\r\n]+/g, ' ').slice(0, 280)];
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
+    const sh = ss.getSheetByName(N_MOOD_TAB) || ss.insertSheet(N_MOOD_TAB);
+    sh.getRange('A:B').setNumberFormat('@');
+    if (sh.getLastRow() === 0) sh.appendRow(N_MOOD_HEADER);
+    const n = sh.getLastRow() - 1;
+    const dates = n > 0 ? sh.getRange(2, 1, n, 1).getDisplayValues().map(r => r[0]) : [];
+    const i = dates.indexOf(date);
+    if (i >= 0) sh.getRange(i + 2, 1, 1, row.length).setValues([row]); else sh.appendRow(row);
+  } finally { lock.releaseLock(); }
+  return { date: row[0], time: row[1], energy: row[2] === '' ? null : row[2], mood: row[3] === '' ? null : row[3],
+    pain: row[4] === '' ? null : row[4], note: row[5] };
 }
 
 /** Funzione pura (provabile fuori da Apps Script): righe delle tre schede -> dati per la pagina. */
