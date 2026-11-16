@@ -31,6 +31,14 @@ const RENPHO_APP_VERSION = '6.6.0';      // NON aggiornare: dalla 8.0.0 il serve
 const RENPHO_TAB = 'Renpho';
 const RENPHO_TZ = 'Europe/Madrid';
 const RENPHO_PARAMS = ['weight', 'bodyfat', 'water', 'muscle', 'bone', 'visfat', 'bmr', 'bmi'];
+// Tipi di dispositivo che l'app Renpho Health 7.11.6 manda al login (da renpho-api).
+// Con una lista vuota il server risponde HTTP 500 per un account vero.
+const RENPHO_DEVICE_TYPES = ['00001', '00002', '00003', '00006', '00007', '00008', '00009', '00010',
+  '00011', '00012', '00015', '00016', '00024', '00025', '00026', '00027', '00029', '00032', '00033',
+  '00034', '00035', '00036', '00051', '00054', '00038', '00044', '00046', '00048', '00023', '00042',
+  '00043', '00057', '00045', '00047', '00049', '00050', '00053', '00055', '00059', '00052', '00058',
+  '00061', '00062', '00063', '00064', '00065', '00067', '00060', '00076', '00070', '00072', '00073',
+  '00071'];
 const RENPHO_HEADER = ['date', 'weight_kg', 'bodyfat_pct', 'water_pct', 'muscle', 'bone',
   'visfat', 'bmr_kcal', 'bmi', 'note'];
 
@@ -172,7 +180,8 @@ function rPost_(endpoint, payload, opts) {
     return rPost_(endpoint, payload, Object.assign({}, opts, { retried: true }));
   }
   if (http !== 200 || (R_OK.indexOf(code) < 0 && msg.toLowerCase() !== 'success')) {
-    throw new Error('Renpho ' + endpoint + ' HTTP ' + http + ' codice ' + code + ': ' + msg.slice(0, 200));
+    throw new Error('Renpho ' + endpoint + ' HTTP ' + http + ' codice ' + code + ': ' +
+      (msg || res.getContentText() || '(risposta vuota)').slice(0, 300));
   }
   return body.data ? rDecrypt_(body.data) : null;
 }
@@ -182,7 +191,7 @@ function renphoLogin_() {
     questionnaire: {},
     login: { password: rcfg_('RENPHO_PASSWORD'), areaCode: 'US', appRevision: RENPHO_APP_VERSION,
       cellphoneType: 'AppsScript', systemType: '11', email: rcfg_('RENPHO_EMAIL'), platform: 'android' },
-    bindingList: { deviceTypes: [] }
+    bindingList: { deviceTypes: RENPHO_DEVICE_TYPES }
   }, { auth: false });
   const login = (data && data.login) || {};
   if (!login.token) throw new Error('Renpho: login senza token');
