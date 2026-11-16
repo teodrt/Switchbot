@@ -3,11 +3,11 @@
 <head>
 <base target="_top">
 <meta charset="utf-8">
-<title>Notturna</title>
+<title>Ritmo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Notturna. Una colonna per il telefono: la notte in apertura (anello del punteggio su cielo notturno),
+/* Ritmo. Una colonna per il telefono: la notte in apertura (anello del punteggio su cielo notturno),
    poi cosa notare, i numeri, il grafico della notte, l'analisi dei dati, l'andamento e il corpo. */
 :root {
   --bg: #0b1020; --sky-1: #121a36; --sky-2: #0b1020; --surface: #131b30; --surface-2: #1a2440; --line: #253152;
@@ -361,7 +361,7 @@ const DATA = <?!= json ?>;
     fmt(Math.abs(L.score - sAvg)) + ' punti ' + (L.score < sAvg ? 'sotto' : 'sopra') + ' la tua media delle ultime 30 notti.');
   if (A && A.over1000_min >= 120) verdict += ' Aria della camera viziata per buona parte della notte.';
   const hero = h('section', 'hero');
-  hero.innerHTML = `<div class="hero-top"><span class="brand"><i></i>Notturna</span><span class="stamp">${GIORNI[dow(L.date)]} ${dayLabel(L.date)} · aggiornato ${esc(DATA.now.slice(11, 16))}</span></div>
+  hero.innerHTML = `<div class="hero-top"><span class="brand"><i></i>Ritmo</span><span class="stamp">${GIORNI[dow(L.date)]} ${dayLabel(L.date)} · aggiornato ${esc(DATA.now.slice(11, 16))}</span></div>
     <div class="hero-body">
       <div class="ring" role="img" aria-label="Sleep score ${hasG ? L.score : 'non disponibile'}">
         <svg viewBox="0 0 120 120"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>

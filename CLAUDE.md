@@ -1,7 +1,9 @@
-# Progetto: monitoraggio sonno e qualità di vita
+# Progetto: Ritmo
 
-Dashboard personale che mette insieme l'aria della camera (SwitchBot), il sonno e l'attività
-(Garmin) e la composizione corporea (Renpho Health), per capire cosa influisce sul sonno.
+App personale (Ritmo) che mette insieme l'aria della camera (SwitchBot), il sonno e l'attività
+(Garmin) e la composizione corporea (Renpho Health), per capire quali parametri fanno stare
+meglio. Oggi il centro è il sonno e il recupero dopo un'operazione; in seguito si aggiungeranno
+prestazioni sportive e umore. Nomi su Google: script "Ritmo - Raccolta dati", foglio "Ritmo - Dati".
 
 ## Regole
 
@@ -89,7 +91,7 @@ CLAUDE.md                 questo file
 apps-script/switchbot.gs  logger SwitchBot (ogni 10 minuti)
 apps-script/garmin.gs     import Garmin (ogni giorno alle 10)
 apps-script/renpho.gs     import Renpho (ogni giorno alle 11, API non ufficiale)
-apps-script/dashboard.gs  web app Notturna: legge il foglio e prepara i dati (nBuild_ è pura, provabile in Node)
+apps-script/dashboard.gs  web app Ritmo: legge il foglio e prepara i dati (nBuild_ è pura, provabile in Node)
 apps-script/dashboard.html pagina della web app: grafica e motore di analisi
 dashboard/README.md       sezioni della dashboard e regole del motore di analisi
 docs/schema-foglio.md     schede e colonne del foglio hub

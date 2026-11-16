@@ -1,4 +1,4 @@
-# Notturna: la dashboard
+# Ritmo: la dashboard
 
 Web app Apps Script nello stesso progetto degli script di raccolta: `apps-script/dashboard.gs`
 (server) e `apps-script/dashboard.html` (pagina). Legge le tre schede del foglio hub a ogni apertura.

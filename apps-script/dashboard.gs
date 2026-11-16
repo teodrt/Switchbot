@@ -1,5 +1,5 @@
 /**
- * Notturna: web app che legge il foglio hub (SwitchBot, Garmin, Renpho) e mostra la dashboard.
+ * Ritmo: web app che legge il foglio hub (SwitchBot, Garmin, Renpho) e mostra la dashboard.
  * Si apre con il link della distribuzione "App web" (Esegui come: me, Accesso: solo io).
  *
  * Proprietà dello script richieste: SHEET_ID.
@@ -13,7 +13,7 @@ function doGet() {
   const t = HtmlService.createTemplateFromFile('dashboard');
   t.json = JSON.stringify(nData_()).replace(/</g, '\\u003c');
   return t.evaluate()
-    .setTitle('Notturna')
+    .setTitle('Ritmo')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
 }
 
