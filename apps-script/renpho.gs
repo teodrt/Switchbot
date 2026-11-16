@@ -21,8 +21,8 @@
  *
  * Funzioni da eseguire a mano:
  *   renphoDebug     prova: login, elenco amici, ultime pesate. Non scrive nel foglio
- *   renphoBackfill  importa gli ultimi 12 mesi
- *   renphoSetup     crea il trigger giornaliero (ore 11) e importa l'ultimo mese
+ *   renphoBackfill  importa tutto lo storico, a blocchi di circa 45-50 pesate
+ *   renphoSetup     crea il trigger giornaliero (ore 11) e importa le ultime pesate
  */
 
 const RENPHO_HOST = 'https://cloud.renpho.com/';
@@ -230,7 +230,7 @@ function rFriendId_() {
   return String(friends[0].userId);
 }
 
-/** Punti giornalieri di un parametro in una finestra di circa un mese che finisce a endTime (unix s, 0 = ora). */
+/** Punti giornalieri di un parametro: le ultime ~45-50 pesate prima di endTime (unix s, 0 = adesso). */
 function rTrend_(friendId, param, endTime) {
   const tz = rTzOffset_();
   return rRecords_(rPost_('RenphoHealth/app/friend/measure/trendV2', {
@@ -242,16 +242,22 @@ function rTrend_(friendId, param, endTime) {
 
 const rNum_ = v => (typeof v === 'number' && isFinite(v) && v > 0) ? Number(v.toFixed(2)) : '';
 
-/** Legge tutti i parametri per la finestra che finisce a endTime e li scrive nel foglio. */
+/**
+ * Legge tutti i parametri per le ultime pesate prima di endTime (unix s, 0 = adesso) e li scrive
+ * nel foglio. Il server restituisce circa 45-50 pesate per chiamata (non un mese di calendario).
+ * Restituisce { rows, oldest }: righe scritte e timestamp della pesata più vecchia ricevuta.
+ */
 function renphoImport_(endTime) {
   const friendId = rFriendId_();
   const days = {};
   const notes = [];
+  let oldest = 0;
   RENPHO_PARAMS.forEach(param => {
     try {
       rTrend_(friendId, param, endTime).forEach(pt => {
         if (!pt.groupDay || !(typeof pt.value === 'number' && pt.value > 0)) return;
         (days[pt.groupDay] = days[pt.groupDay] || {})[param] = pt.value;
+        if (param === 'weight' && pt.timeStamp && (!oldest || pt.timeStamp < oldest)) oldest = pt.timeStamp;
       });
     } catch (e) { notes.push(param + ': ' + e.message); }
   });
@@ -259,7 +265,7 @@ function renphoImport_(endTime) {
     RENPHO_PARAMS.map(k => rNum_(days[d][k])), [notes.join(' | ').slice(0, 300)]));
   if (rows.length) renphoWrite_(rows);
   else if (notes.length) throw new Error(notes.join(' | '));
-  return rows.length;
+  return { rows: rows.length, oldest: oldest };
 }
 
 function renphoWrite_(rows) {
@@ -279,15 +285,22 @@ function renphoWrite_(rows) {
 
 // ---------- funzioni da eseguire ----------
 
-/** Trigger giornaliero: ultimo mese (aggiorna anche le pesate già scritte). */
+/** Trigger giornaliero: le ultime pesate (aggiorna anche quelle già scritte). */
 function renphoDaily() { renphoImport_(0); }
 
-/** Importa gli ultimi 12 mesi, un mese alla volta. */
+/**
+ * Importa tutto lo storico: parte da adesso e va indietro, ripartendo ogni volta
+ * da un secondo prima della pesata più vecchia ricevuta, finché non ne arrivano più.
+ */
 function renphoBackfill() {
-  const now = Math.floor(Date.now() / 1000);
-  let total = 0;
-  for (let m = 0; m < 12; m++) total += renphoImport_(m === 0 ? 0 : now - m * 30 * 86400);
-  Logger.log('Giorni con pesata importati: ' + total);
+  let end = 0, total = 0;
+  for (let i = 0; i < 40; i++) {
+    const r = renphoImport_(end);
+    total += r.rows;
+    if (!r.oldest || (end && r.oldest >= end)) break;
+    end = r.oldest - 1;
+  }
+  Logger.log('Giorni con pesata scritti (anche ripetuti tra un blocco e l\'altro): ' + total);
 }
 
 /** Crea (o ricrea) solo il trigger di renphoDaily, senza toccare gli altri. */

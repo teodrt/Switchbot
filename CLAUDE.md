@@ -56,6 +56,11 @@ I nomi delle funzioni devono essere unici nel progetto: prefisso `g` per Garmin.
 - Una sola sessione per account: lo script usa un **secondo account** amico dell'account
   principale (endpoint `RenphoHealth/app/friend/...`), così l'app sul telefono non si disconnette.
 - Proprietà: `RENPHO_EMAIL`, `RENPHO_PASSWORD` (del secondo account), facoltativa `RENPHO_FRIEND_ID`.
+- `trendV2` con `timeType: MONTH` NON restituisce un mese: restituisce le ultime ~45-50 pesate
+  prima di `endTime` (verificato sul conto reale). Il backfill va indietro ripartendo dalla pesata
+  più vecchia ricevuta.
+- L'id del secondo account ha 19 cifre: si legge dal testo della risposta, non da `JSON.parse`.
+- Al login serve la lista completa `deviceTypes` (con lista vuota: HTTP 500 per un account vero).
 - AES scritto a mano in `renpho.gs` (Apps Script non lo ha), verificato col vettore FIPS-197
   e con Node crypto. Login con email inventata verificato: risposta 106 "user does not exist".
 
@@ -97,6 +102,7 @@ docs/schema-foglio.md     schede e colonne del foglio hub
 4. Import Garmin con la Personal API (`apps-script/garmin.gs`): fatto. Backfill di 90 giorni
    eseguito, trigger `garminDaily` attivo (ogni giorno alle 10). SpO2 notturna presente solo da
    metà novembre 2026 (Pulse Ox attivato da poco).
-5. Import Renpho con l'API non ufficiale (`apps-script/renpho.gs`): scritto, da provare.
+5. Import Renpho con l'API non ufficiale (`apps-script/renpho.gs`): login e lettura verificati
+   con `renphoDebug`; backfill e trigger da eseguire.
 6. Dashboard definitiva: stanotte, la notte in un grafico, cosa influisce sul sonno, trend, corpo.
 7. Report settimanale automatico.

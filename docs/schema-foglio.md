@@ -59,7 +59,7 @@ delle fasi durante la notte.
 
 Una riga per giorno con una pesata (l'ultima del giorno), scritta da `apps-script/renpho.gs`
 tramite l'API cloud non ufficiale di Renpho Health, letta da un secondo account "amico".
-Ogni giorno alle 11 si riscrive l'ultimo mese. La colonna A è testo (`yyyy-MM-dd`).
+Ogni giorno alle 11 si riscrivono le ultime ~45-50 pesate. La colonna A è testo (`yyyy-MM-dd`).
 
 | Col | Nome | Parametro API | Note |
 |---|---|---|---|
