@@ -22,7 +22,7 @@ prestazioni sportive e umore. Nomi su Google: script "Ritmo - Raccolta dati", fo
 |---|---|
 | Hub dei dati | Un foglio Google, una scheda per fonte (vedi `docs/schema-foglio.md`) |
 | Raccolta automatica | Apps Script con trigger temporali (`apps-script/`) |
-| Dashboard | Web app Apps Script (`dashboard/`), legge il foglio |
+| App Ritmo | Web app Apps Script (`dashboard.gs` + `ritmo.html`), legge il foglio |
 | Codice e memoria del progetto | Questo repo |
 
 Claude Code non fa da hub: le sessioni non restano accese. Si usa una sessione quando serve
@@ -108,6 +108,7 @@ docs/schema-foglio.md     schede e colonne del foglio hub
    metà novembre 2026 (Pulse Ox attivato da poco).
 5. Import Renpho con l'API non ufficiale (`apps-script/renpho.gs`): fatto. Backfill eseguito
    (172 giorni con pesata, dal 2018), trigger `renphoDaily` attivo (ogni giorno alle 11).
-6. Dashboard definitiva (`dashboard.gs` + `ritmo.html`): scritta e provata con i dati reali
-   in Node e Playwright; da distribuire come App web (Esegui come: me, Accesso: solo io).
+6. App Ritmo (`dashboard.gs` + `ritmo.html`): distribuita come App web (Esegui come: me, Accesso:
+   solo io). Per aggiornarla: incollare i file, poi Gestisci deployment > Modifica > Nuova versione
+   (mantiene lo stesso link). Prossimi passi: umore (check-in), sport (carico di allenamento Garmin).
 7. Report settimanale automatico.
