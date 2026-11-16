@@ -2,6 +2,10 @@
    che fornisce la variabile globale DATA con i dati del foglio. Nessun dato personale in questo file. */
 (function () {
   'use strict';
+  // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
+  const RELEASE = '16 nov 2026';
+  const SRC = (document.currentScript && document.currentScript.src) || '';
+  const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const MARKUP = `<header class="top"><div class="top-in">
   <div class="brand"><svg class="pulse" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 13h4l2.5-6 4 11 3-8 2 3H22"/></svg>Ritmo</div>
   <div class="stamp" id="stamp"></div>
@@ -352,6 +356,7 @@
     main.innerHTML = '';
     const v = h('div', 'view'); main.appendChild(v);
     ({ oggi: viewOggi, sonno: viewSonno, corpo: viewCorpo, casa: viewCasa, analisi: viewAnalisi })[S.tab](v);
+    v.appendChild(h('p', 'foot', `Ritmo · versione ${esc(REF === 'main' || REF === 'locale' ? REF : REF.slice(0, 7))} · ${RELEASE}`));
     animate(v);
   };
   const rerender = () => { const y = window.scrollY; render(); window.scrollTo(0, y); };
