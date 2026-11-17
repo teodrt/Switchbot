@@ -64,6 +64,13 @@ function nMood_(rows) {
  * Una riga per data: se esiste già la aggiorna. Restituisce la riga salvata.
  */
 function ritmoSaveCheckin(c) {
+  // Segnale di apertura dall'app (nessun dato salvato nel foglio Umore): versione e ora, per la diagnosi.
+  if (c && c.ping) {
+    PropertiesService.getScriptProperties().setProperty('APP_SEEN', JSON.stringify({
+      at: Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd HH:mm'), release: String(c.release || '').slice(0, 40),
+      ref: String(c.ref || '').slice(0, 12), view: String(c.view || '').slice(0, 20), w: Number(c.w) || null }));
+    return { ok: true };
+  }
   const day = Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd');
   const date = (c && /^\d{4}-\d{2}-\d{2}$/.test(c.date || '')) ? c.date : day;
   const int = (v, a, b) => { const x = Math.round(Number(v)); return isFinite(x) && x >= a && x <= b ? x : ''; };

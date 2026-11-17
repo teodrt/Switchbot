@@ -61,6 +61,40 @@ function ritmoEngineTick_() {
     }
   }
   p.setProperty('ENGINE_LAST', Utilities.formatDate(new Date(), E_TZ, 'yyyy-MM-dd HH:mm'));
+  try { eWriteStatus_(); } catch (e) { eLog_('errore scheda Motore: ' + e.message); }
+}
+
+/**
+ * Scheda "Motore" del foglio: stato leggibile da fuori (anche da Claude col connettore Drive),
+ * così la diagnosi non richiede di aprire l'app. Nessuna chiave o credenziale qui.
+ */
+function eWriteStatus_() {
+  const p = PropertiesService.getScriptProperties();
+  const ss = SpreadsheetApp.openById(p.getProperty('SHEET_ID'));
+  const sh = ss.getSheetByName('Motore') || ss.insertSheet('Motore');
+  let url = '';
+  try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { url = ''; }
+  const seen = JSON.parse(p.getProperty('APP_SEEN') || 'null');
+  const st = eStatus_();
+  const count = name => { const t = ss.getSheetByName(name); return t ? Math.max(0, t.getLastRow() - 1) : 0; };
+  const rows = [
+    ['voce', 'valore'],
+    ['ultimo giro del motore', st.last],
+    ['versione del codice (md5)', st.code],
+    ['codice aggiornato il', st.updated],
+    ['migrazioni fatte', p.getProperty('MIGRATIONS_DONE') || '[]'],
+    ['trigger', ScriptApp.getProjectTriggers().map(t => t.getHandlerFunction()).join(', ')],
+    ['link web app (servizio)', url],
+    ['app aperta l\'ultima volta', seen ? seen.at : 'mai (con la versione che segnala)'],
+    ['versione app aperta', seen ? (seen.release + ' · ' + seen.ref) : ''],
+    ['sezione e larghezza schermo', seen ? (seen.view + ' · ' + (seen.w || '') + ' px') : ''],
+    ['righe SwitchBot', count(ss.getSheets()[0].getName())],
+    ['righe Garmin', count('Garmin')], ['righe Attivita', count('Attivita')], ['righe Renpho', count('Renpho')], ['righe Umore', count('Umore')],
+    ['errori recenti', st.errors.map(e => e[0] + ' ' + e[1]).join(' | ')],
+    ['registro', st.log.map(e => e[0] + ' ' + e[1]).join(' | ')]
+  ];
+  sh.clearContents();
+  sh.getRange(1, 1, rows.length, 2).setValues(rows.map(r => [String(r[0]), String(r[1])]));
 }
 
 /** Tiene un solo trigger: ritmoTick ogni 10 minuti. Rimuove quelli vecchi (logReading, garminDaily...). */
