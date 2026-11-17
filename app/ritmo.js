@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '16 nov 2026 · v3';
+  const RELEASE = '17 nov 2026 · v3.1';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap';
@@ -531,14 +531,17 @@
     main.innerHTML = '';
     const v = h('div', 'view' + (dir ? ' ' + dir : '')); main.appendChild(v);
     ({ oggi: viewOggi, sonno: viewSonno, sport: viewSport, corpo: viewCorpo, casa: viewCasa, insight: viewInsight })[S.tab](v);
-    v.appendChild(h('p', 'foot', `Ritmo · versione ${esc(REF === 'main' || REF === 'locale' ? REF : REF.slice(0, 7))} · ${RELEASE}`));
+    v.appendChild(h('p', 'foot', footText()));
     [...v.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, 10)));
     animate(v);
   };
   const rerender = () => { const y = window.scrollY; main.innerHTML = ''; const v = h('div', 'view'); main.appendChild(v);
     ({ oggi: viewOggi, sonno: viewSonno, sport: viewSport, corpo: viewCorpo, casa: viewCasa, insight: viewInsight })[S.tab](v);
-    v.appendChild(h('p', 'foot', `Ritmo · versione ${esc(REF === 'main' || REF === 'locale' ? REF : REF.slice(0, 7))} · ${RELEASE}`));
+    v.appendChild(h('p', 'foot', footText()));
     [...v.children].forEach(c => { c.style.animation = 'none'; }); animate(v); window.scrollTo(0, y); };
+  const ENG = DATA.engine || null;
+  const footText = () => `Ritmo · versione ${esc(REF === 'main' || REF === 'locale' ? REF : REF.slice(0, 7))} · ${RELEASE}` +
+    (ENG && ENG.last ? ` · motore ${esc(ENG.last.slice(11))}${ENG.code ? ' (' + esc(ENG.code.slice(0, 7)) + ')' : ''}` : '');
   const setBadge = () => { const n = analysis().findings.length; const b = $('#insightBtn'); const old = $('.badge', b); if (old) old.remove(); if (n) b.insertAdjacentHTML('beforeend', `<span class="badge">${n}</span>`); };
 
   // =========================================================================
@@ -940,6 +943,11 @@
       return noteHTML({ s: good ? 'good' : 'warn', i: tt.diff > 0 ? 'up' : 'down', t: `<strong>${cap(tt.o.label)} ${tt.diff > 0 ? 'in aumento' : 'in calo'}</strong>: <span class="num">${fmt(tt.now, tt.o.dec)}</span>${tt.o.unit} contro ${fmt(tt.was, tt.o.dec)}${tt.o.unit} nelle 4 settimane prima.` }); }).join('')));
     if (an.learning.length) v.appendChild(h('section', 'card', `<div class="chead"><span class="eyebrow"><i></i>Sto ancora imparando</span><span class="muted small">servono ${an.MIN_N} giorni</span></div>` +
       an.learning.map(l => `<div class="prog"><span>${esc(l.l)} · <span class="num">${l.n}/${an.MIN_N}</span></span><div class="track"><i data-w="${Math.min(100, 100 * l.n / an.MIN_N).toFixed(0)}%"></i></div></div>`).join('')));
+    if (ENG) {
+      const recentErr = (ENG.errors || []).filter(e => e[0] >= addDays(today, -1));
+      v.appendChild(h('section', 'card', `<details class="how"${recentErr.length ? ' open' : ''}><summary>Stato del motore${recentErr.length ? ' · ' + recentErr.length + (recentErr.length === 1 ? ' errore' : ' errori') + ' nelle ultime 24 ore' : ' · tutto regolare'}</summary>
+        <ul><li>Ultimo giro: ${esc(ENG.last || '-')} · codice ${esc(ENG.code || '-')}, aggiornato ${esc(ENG.updated || '-')}</li>${(ENG.log || []).slice().reverse().map(l => `<li>${esc(l[0].slice(5))} · ${esc(l[1])}</li>`).join('')}</ul></details>`));
+    }
     v.appendChild(h('section', 'card', `<details class="how"><summary>Come funziona l'analisi</summary><ul>
       <li>Confronto 11 fattori (ora e regolarità del sonno, passi, stress e carico di allenamento del giorno prima, CO2, temperatura e umidità della camera, sleep score e HRV per il check-in, weekend) con 8 risultati (sleep score, HRV, battito a riposo, Body Battery, sonno profondo, energia, umore, dolore).</li>
       <li>Correlazione di Spearman verificata con un test di permutazione: niente ipotesi sulla forma dei dati.</li>
