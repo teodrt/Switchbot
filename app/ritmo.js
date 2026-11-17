@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '17 nov 2026 · v3.1';
+  const RELEASE = '17 nov 2026 · v3.2';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap';
@@ -956,8 +956,9 @@
       <li>Sono associazioni, non prove di causa: usale come ipotesi da provare.</li></ul></details>`));
   }
 
-  // avvio
+  // avvio: segnala al motore che l'app è stata aperta (versione e ora, per la diagnosi)
   setTimeout(setBadge, 400);
+  try { if (window.google && google.script && google.script.run) google.script.run.withFailureHandler(() => {}).ritmoSaveCheckin({ ping: true, release: RELEASE, ref: REF, view: (location.hash || '#oggi').slice(1), w: window.innerWidth }); } catch (e) {}
   const start = (location.hash || '').replace('#', '');
   go(TABS.some(t => t[0] === start) || start === 'insight' ? start : 'oggi');
   }

@@ -52,6 +52,12 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
   vede le chiavi nelle proprietà. Le chiavi non vanno mai nel repo.
 - Il connettore Google Drive permette a Claude di leggere il progetto (`download_file_content` con
   `application/vnd.google-apps.script+json`) per controllare, non di modificarlo.
+- **Diagnosi senza aprire l'app** (l'app è privata, Claude non può aprirla): a ogni giro il motore
+  scrive la scheda **`Motore`** del foglio (ultimo giro, md5 del codice, trigger, link del servizio,
+  ultima apertura dell'app con versione, righe per scheda, errori, registro). L'app all'apertura
+  manda un segnale (`ritmoSaveCheckin({ping:true,...})`, salvato in `APP_SEEN`). Leggere quella scheda
+  con `read_file_content` prima di chiedere screenshot all'utente. Per vedere l'app: scaricare il
+  foglio (xlsx), ricostruire `DATA` con `nBuild_` e renderizzare `app/` con Playwright.
 
 ## Pubblicare modifiche all'app
 
