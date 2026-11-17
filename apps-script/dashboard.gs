@@ -29,6 +29,7 @@ function nData_() {
     vals(ss.getSheetByName('Renpho')), Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd HH:mm'));
   out.activities = nActivities_(vals(ss.getSheetByName('Attivita')));
   out.mood = nMood_(vals(ss.getSheetByName(N_MOOD_TAB)));
+  try { out.engine = typeof eStatus_ === 'function' ? eStatus_() : null; } catch (e) { out.engine = null; }
   return out;
 }
 

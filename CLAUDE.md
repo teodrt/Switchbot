@@ -29,16 +29,29 @@ prestazioni sportive e umore. Nomi su Google: script "Ritmo - Raccolta dati", fo
 Claude Code non fa da hub: le sessioni non restano accese. Si usa una sessione quando serve
 costruire o analizzare, eventualmente un'attività programmata per i report periodici.
 
-## Deploy degli Apps Script
+## Motore auto-aggiornante (Apps Script)
 
-Il connettore Google Drive permette a Claude di **leggere** il codice di uno script
-(`download_file_content` con `application/vnd.google-apps.script+json`) e di **rinominarlo**,
-ma non di modificarne il codice. Il codice in `apps-script/` va incollato a mano dall'utente
-nell'editor di script.google.com, poi si controlla scaricandolo di nuovo.
-
-Tutti i file di `apps-script/` stanno nello stesso progetto Apps Script. Ogni funzione di setup
-cancella e ricrea **solo il proprio trigger** (filtrando per `getHandlerFunction()`), mai tutti.
-I nomi delle funzioni devono essere unici nel progetto: prefisso `g` per Garmin.
+- Nel progetto Apps Script ci sono solo due file: **`Motore`** (`apps-script/motore.gs`, fisso, non va
+  più modificato) e la pagina **`ritmo`** (`apps-script/ritmo.html`, il caricatore dell'app).
+- A ogni esecuzione il motore scarica da `raw.githubusercontent.com/teodrt/Switchbot/main/apps-script/`
+  i file elencati in `apps-script/engine.json`, fa un controllo di sintassi e li esegue con un eval
+  globale. Cache 15 minuti (CacheService); ultima versione buona salvata nelle proprietà
+  (`RITMO_P*`, `RITMO_MD5`), usata se GitHub non risponde o il codice nuovo non compila.
+- **Un solo trigger**: `ritmoTick` ogni 10 minuti. `engine.gs` decide i lavori (`E_JOBS`: SwitchBot a
+  ogni giro, Garmin dopo le 10, Renpho dopo le 11, report il lunedì dopo le 8:40), le operazioni una
+  tantum (`E_MIGRATIONS`, una per giro, registrate in `MIGRATIONS_DONE`) e rimuove ogni altro trigger.
+  Un lavoro fallito si riprova dopo un'ora. Registro in `ENGINE_LOG`, mostrato nell'app (Insight).
+- Per cambiare il codice di raccolta: modificare i `.gs` su `main`. Niente da incollare. Un nuovo file
+  va aggiunto a `engine.json`. Le funzioni chiamate dall'esterno (trigger, web app, `google.script.run`)
+  devono avere un punto di ingresso fisso in `motore.gs`: oggi `doGet`, `ritmoSaveCheckin`, `ritmoTick`.
+  Una nuova funzione chiamata dall'app richiederebbe di aggiornare `motore.gs` a mano: evitarlo
+  passando da quelle esistenti.
+- Nomi globali unici tra tutti i file (vengono uniti): prefissi `g` Garmin, `r` Renpho, `n` app,
+  `wk` report, `e` pianificatore.
+- Rischio accettato dall'utente (17/11/2026): il codice di `main` gira con il suo account Google e
+  vede le chiavi nelle proprietà. Le chiavi non vanno mai nel repo.
+- Il connettore Google Drive permette a Claude di leggere il progetto (`download_file_content` con
+  `application/vnd.google-apps.script+json`) per controllare, non di modificarlo.
 
 ## Pubblicare modifiche all'app
 
@@ -46,8 +59,7 @@ I nomi delle funzioni devono essere unici nel progetto: prefisso `g` per Garmin.
   `main`: il caricatore chiede lo SHA a api.github.com e usa `cdn.jsdelivr.net/gh/teodrt/Switchbot@<sha>`,
   con ripiego su `@main`. Una modifica all'interfaccia è online appena arriva su `main`.
 - Prima del merge: provare con i dati reali (Node + Playwright) e aggiornare l'anteprima privata.
-- `apps-script/ritmo.html` e `dashboard.gs` cambiano di rado: l'utente li incolla e salva. Con il
-  link di test della web app (finisce con `/dev`, solo per il proprietario) non serve un nuovo deployment.
+- L'utente apre l'app dal link di test della web app (finisce con `/dev`, solo per il proprietario).
 - `DATA` arriva solo da Apps Script: nessun dato personale in `app/`.
 
 ## Garmin Personal API
@@ -99,6 +111,9 @@ restituisce zeri e una CO2 vecchia.
 
 ```
 CLAUDE.md                 questo file
+apps-script/motore.gs     motore fisso (file "Motore" nel progetto): scarica ed esegue gli altri file
+apps-script/engine.json   elenco dei file scaricati dal motore
+apps-script/engine.gs     pianificatore: lavori, migrazioni, trigger, stato
 apps-script/switchbot.gs  logger SwitchBot (ogni 10 minuti)
 apps-script/garmin.gs     import Garmin (ogni giorno alle 10)
 apps-script/renpho.gs     import Renpho (ogni giorno alle 11, API non ufficiale)
@@ -128,3 +143,4 @@ docs/schema-foglio.md     schede e colonne del foglio hub
 7. v3 (16/11/2026): check-in (energia, umore, dolore, scheda `Umore`), sport (attività Garmin,
    scheda `Attivita`, carico 7 g contro 28 g, VO2 max), report settimanale via email e in app,
    interfaccia rifatta (colori per sezione, timeline del sonno, schede dal basso, carosello di insight).
+8. v3.1 (17/11/2026): motore auto-aggiornante, nessun file da incollare dopo l'installazione.
