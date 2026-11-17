@@ -3,10 +3,10 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '17 nov 2026 · v4';
+  const RELEASE = '17 nov 2026 · v5';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
-  const FONTS = 'https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@500;600;700;800&display=swap';
+  const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
   const MARKUP = `<div class="aurora" aria-hidden="true"></div>
 <header class="top" id="top"><div class="top-in">
   <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 13h4l2.5-6 4 11 3-8 2 3H22"/></svg></span><div><b>Ritmo</b><span id="hello"></span></div></div>
@@ -413,33 +413,30 @@
       <line x1="100" y1="100" x2="${n[0].toFixed(1)}" y2="${n[1].toFixed(1)}" stroke="var(--fg)" stroke-width="3.5" stroke-linecap="round"/><circle cx="100" cy="100" r="7" fill="var(--fg)"/>
       <text x="20" y="116" text-anchor="middle">400</text><text x="180" y="116" text-anchor="middle">1600</text></svg>`;
   };
-  // Anelli concentrici del recupero (fino a 4), colori brillanti su fondo colorato.
-  const RCOL = ['#7ef9ff', '#ffe66d', '#9dffb0', '#ffb3e6'];
-  const ringsHTML = (parts, score) => {
-    const R = [56, 45, 34, 23];
-    const arcs = parts.slice(0, 4).map((p, i) => { const C = 2 * Math.PI * R[i], to = (C * (1 - clamp(p.v, 0, 100) / 100)).toFixed(2);
-      return `<circle cx="64" cy="64" r="${R[i]}" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="8.5"/>
-        <circle class="arc" cx="64" cy="64" r="${R[i]}" fill="none" stroke="${RCOL[i]}" stroke-width="8.5" stroke-linecap="round" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${C.toFixed(2)}" data-to="${to}" transform="rotate(-90 64 64)" style="transition-delay:${i * 120}ms;filter:drop-shadow(0 0 4px ${RCOL[i]}88)"/>`; }).join('');
-    return `<div class="rings" role="img" aria-label="Recupero ${isNum(score) ? score : 'non disponibile'}"><svg viewBox="0 0 128 128">${arcs}</svg>
-      <div class="center"><span class="n" data-count="${isNum(score) ? score : ''}">${isNum(score) ? '0' : '-'}</span><span class="l">recupero</span></div></div>`;
+  // Contagiri del recupero: arco di 240 gradi con tacche ogni 10, lancetta e numero in corsivo.
+  const tachoHTML = score => {
+    const cx = 120, cy = 120, R = 96, A0 = 150, SW = 240, v = isNum(score) ? clamp(score, 0, 100) : 0;
+    const pt = (f, r) => { const a = (A0 + f * SW) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+    const arcD = (f0, f1, r) => { const p0 = pt(f0, r), p1 = pt(f1, r); return `M${p0[0].toFixed(1)},${p0[1].toFixed(1)} A${r},${r} 0 ${(f1 - f0) * SW > 180 ? 1 : 0} 1 ${p1[0].toFixed(1)},${p1[1].toFixed(1)}`; };
+    const L = 2 * Math.PI * R * SW / 360;
+    const ticks = [...Array(51)].map((_, i) => { const f = i / 50, big = i % 5 === 0, a = pt(f, R - 12), c = pt(f, R - (big ? 21 : 16));
+      return `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${c[0].toFixed(1)}" y2="${c[1].toFixed(1)}" stroke="${i <= 20 ? 'var(--bad)' : 'rgba(255,255,255,.35)'}" stroke-width="${big ? 1.6 : .8}" opacity="${big ? .9 : .5}"/>`; }).join('');
+    const nums = [0, 20, 40, 60, 80, 100].map(n => { const q = pt(n / 100, R - 31); return `<text x="${q[0].toFixed(1)}" y="${(q[1] + 3).toFixed(1)}" text-anchor="middle">${n}</text>`; }).join('');
+    const ang = A0 + (v / 100) * SW + 90, tip = R - 24;
+    return `<svg class="tacho" viewBox="0 0 240 200" role="img" aria-label="Recupero ${isNum(score) ? score : 'non disponibile'} su 100">
+      <defs><linearGradient id="tg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3d6bff"/><stop offset=".55" stop-color="#ffb27a"/><stop offset="1" stop-color="#ff6a2b"/></linearGradient></defs>
+      <path d="${arcD(0, 1, R)}" stroke="rgba(255,255,255,.07)" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <path class="arc" d="${arcD(0, 1, R)}" stroke="url(#tg)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="${L.toFixed(1)}" stroke-dashoffset="${L.toFixed(1)}" data-to="${(L * (1 - v / 100)).toFixed(1)}" style="filter:drop-shadow(0 0 8px rgba(255,122,60,.55))"/>
+      ${ticks}${nums}
+      <g class="needle" style="transform:rotate(${A0 + 90}deg)" data-rot="${ang.toFixed(1)}"><line x1="${cx}" y1="${cy + 14}" x2="${cx}" y2="${cy - tip}" stroke="#ff6a2b" stroke-width="2.4" stroke-linecap="round" style="filter:drop-shadow(0 0 6px #ff6a2b)"/></g>
+      <circle cx="${cx}" cy="${cy}" r="6" fill="#0b0d14" stroke="#ff6a2b" stroke-width="2"/>
+      <text class="tn" x="${cx}" y="${cy + 46}" text-anchor="middle" data-count="${isNum(score) ? score : ''}">${isNum(score) ? '0' : '-'}</text>
+      <text class="tl" x="${cx}" y="${cy + 62}" text-anchor="middle">RECUPERO / 100</text></svg>`;
   };
-  const ringsLegend = parts => '<div class="rlegend">' + parts.slice(0, 4).map((p, i) => `<div><i style="background:${RCOL[i]}"></i><span>${p.k}</span><b data-count="${Math.round(p.v)}">0</b></div>`).join('') + '</div>';
-  // Mascotte: una goccia sorridente che cambia espressione con il recupero.
-  const mascotHTML = score => {
-    const mood = !isNum(score) ? 1 : score >= 80 ? 2 : score >= 60 ? 1 : 0;
-    const mouth = ['M48 82 q12 -8 24 0', 'M48 80 q12 6 24 0', 'M44 76 q16 16 32 0'][mood];
-    const eyes = mood === 0 ? '<path class="eye" d="M42 62 q6 4 12 0M66 62 q6 4 12 0" stroke="#2b1d3a" stroke-width="4" fill="none" stroke-linecap="round"/>'
-      : '<ellipse class="eye" cx="48" cy="61" rx="5" ry="6.5" fill="#2b1d3a"/><ellipse class="eye" cx="72" cy="61" rx="5" ry="6.5" fill="#2b1d3a"/><circle cx="50" cy="58.5" r="1.8" fill="#fff"/><circle cx="74" cy="58.5" r="1.8" fill="#fff"/>';
-    const extra = mood === 0 ? '<text x="88" y="34" font-family="Fredoka, sans-serif" font-weight="700" font-size="14" fill="#fff" opacity=".9">z</text><text x="98" y="22" font-family="Fredoka, sans-serif" font-weight="700" font-size="10" fill="#fff" opacity=".7">z</text>'
-      : mood === 2 ? '<path class="spark" d="M98 22 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5z" fill="#ffe66d"/><path class="spark" d="M18 34 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6z" fill="#fff" style="animation-delay:.8s"/>' : '';
-    return `<svg class="mascot" viewBox="0 0 120 120" role="img" aria-label="Ritmo, la tua mascotte">
-      <defs><radialGradient id="mg" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#fff6c9"/><stop offset=".55" stop-color="#ffd166"/><stop offset="1" stop-color="#ff9f43"/></radialGradient></defs>
-      <ellipse cx="60" cy="110" rx="30" ry="5" fill="rgba(0,0,0,.15)"/>
-      <path d="M60 14 C82 14 98 40 98 66 C98 92 82 106 60 106 C38 106 22 92 22 66 C22 40 38 14 60 14z" fill="url(#mg)"/>
-      <ellipse cx="44" cy="36" rx="10" ry="6" fill="#fff" opacity=".55" transform="rotate(-25 44 36)"/>
-      ${eyes}<ellipse class="cheek" cx="38" cy="73" rx="6" ry="4" fill="#ff6b6b"/><ellipse class="cheek" cx="82" cy="73" rx="6" ry="4" fill="#ff6b6b"/>
-      <path d="${mouth}" stroke="#2b1d3a" stroke-width="4" fill="none" stroke-linecap="round"/>${extra}</svg>`;
-  };
+  // Settori come nei tempi di F1: viola = ottimo, verde = buono, giallo = sotto.
+  const secCol = v => v >= 90 ? 'var(--purple)' : v >= 70 ? 'var(--good)' : 'var(--warn)';
+  const sectorsHTML = parts => '<div class="sectors">' + parts.slice(0, 4).map((p, i) => `<div class="sector" style="--sc:${secCol(p.v)}"><span class="sk">S${i + 1}</span><span class="sn">${p.k}</span><b data-count="${Math.round(p.v)}">0</b></div>`).join('') + '</div>'
+    + '<div class="seclegend"><span><i style="background:var(--purple)"></i>ottimo</span><span><i style="background:var(--good)"></i>buono</span><span><i style="background:var(--warn)"></i>sotto la media</span></div>';
   // Quadrante del sonno: orologio di 24 ore con l'arco della notte e l'orario medio.
   const dialHTML = (n, avgB, avgE) => {
     const b = bedMin(n.bed_start), e = bedMin(n.bed_end); if (b === null || e === null) return '';
@@ -451,24 +448,18 @@
     const avg = isNum(avgB) && isNum(avgE) ? `<path d="${arc(avgB, avgE, 94)}" stroke="var(--faint)" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="2 5"/>` : '';
     const mB = pt(b, 92), mE = pt(e, 92);
     return `<svg class="dial" viewBox="0 0 200 200" role="img" aria-label="Orario del sonno">
-      <defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6c5ce7"/><stop offset="1" stop-color="#ff6fb5"/></linearGradient></defs>
-      <circle cx="100" cy="100" r="92" fill="none" stroke="var(--surface-2)" stroke-width="14"/>${avg}${ticks}${lab}
-      <path class="draw" d="${arc(b, e, 92)}" stroke="url(#dg)" stroke-width="14" fill="none" stroke-linecap="round" style="filter:drop-shadow(0 4px 8px rgba(108,92,231,.35))"/>
-      <circle cx="${mB[0].toFixed(1)}" cy="${mB[1].toFixed(1)}" r="9" fill="#fff" stroke="#6c5ce7" stroke-width="3"/><text x="${mB[0].toFixed(1)}" y="${(mB[1] + 3.5).toFixed(1)}" text-anchor="middle" style="font-size:9px;fill:#6c5ce7">☾</text>
-      <circle cx="${mE[0].toFixed(1)}" cy="${mE[1].toFixed(1)}" r="9" fill="#fff" stroke="#ff9f43" stroke-width="3"/><text x="${mE[0].toFixed(1)}" y="${(mE[1] + 3.5).toFixed(1)}" text-anchor="middle" style="font-size:9px;fill:#ff9f43">☀</text>
+      <defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3d6bff"/><stop offset="1" stop-color="#b46cff"/></linearGradient></defs>
+      <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="14"/>${avg}${ticks}${lab}
+      <path class="draw" d="${arc(b, e, 92)}" stroke="url(#dg)" stroke-width="14" fill="none" stroke-linecap="round" style="filter:drop-shadow(0 0 8px rgba(76,141,255,.55))"/>
+      <circle cx="${mB[0].toFixed(1)}" cy="${mB[1].toFixed(1)}" r="9" fill="#0b0d14" stroke="#4c8dff" stroke-width="2"/><text x="${mB[0].toFixed(1)}" y="${(mB[1] + 3.5).toFixed(1)}" text-anchor="middle" style="font-size:9px;fill:#8ab4ff">☾</text>
+      <circle cx="${mE[0].toFixed(1)}" cy="${mE[1].toFixed(1)}" r="9" fill="#0b0d14" stroke="#ff7a3c" stroke-width="2"/><text x="${mE[0].toFixed(1)}" y="${(mE[1] + 3.5).toFixed(1)}" text-anchor="middle" style="font-size:9px;fill:#ffb27a">☀</text>
       <text class="dc" x="100" y="102" text-anchor="middle">${hm(n.sleep_h)}</text><text class="ds" x="100" y="118" text-anchor="middle">${esc(n.bed_start)} → ${esc(n.bed_end)}</text></svg>`;
   };
-  const confetti = () => {
-    if (reduced) return;
-    const box = h('div', 'confetti'), cols = ['#ff6b6b', '#feca57', '#1dd1a1', '#54a0ff', '#8e6cf5', '#ff6fb5', '#ff9f43'];
-    for (let i = 0; i < 70; i++) { const c = h('i'); c.style.left = (Math.random() * 100) + '%'; c.style.background = cols[i % cols.length];
-      c.style.setProperty('--dx', ((Math.random() - .5) * 160) + 'px'); c.style.setProperty('--rot', (Math.random() * 900 - 450) + 'deg');
-      c.style.animationDuration = (1.6 + Math.random() * 1.4) + 's'; c.style.animationDelay = (Math.random() * .25) + 's'; c.style.width = (6 + Math.random() * 6) + 'px'; box.appendChild(c); }
-    document.body.appendChild(box); setTimeout(() => box.remove(), 3400);
-  };
+  const confetti = () => { const f = h('div', 'flash'); document.body.appendChild(f); setTimeout(() => f.remove(), 1300); };
   const animate = root => {
     raf2(() => {
       root.querySelectorAll('[data-to]').forEach(a => a.setAttribute('stroke-dashoffset', a.dataset.to));
+      root.querySelectorAll('[data-rot]').forEach(n => { n.style.transform = `rotate(${n.dataset.rot}deg)`; });
       root.querySelectorAll('[data-count]').forEach(n => { if (n.dataset.count !== '') countUp(n, +n.dataset.count, +(n.dataset.dec || 0)); });
       root.querySelectorAll('[data-w]').forEach(n => { n.style.width = n.dataset.w; });
       root.querySelectorAll('[data-hgt]').forEach(n => { n.style.height = n.dataset.hgt; });
@@ -635,8 +626,9 @@
     const hero = h('section', 'hero');
     const hrs = +((DATA.now || '').slice(11, 13) || 12);
     const greet = hrs < 5 ? 'Ancora sveglio?' : hrs < 13 ? 'Buongiorno!' : hrs < 18 ? 'Buon pomeriggio!' : 'Buonasera!';
-    hero.innerHTML = `<div class="hello">${mascotHTML(R ? R.score : null)}<div style="display:grid;gap:8px;min-width:0"><span class="eyebrow"><i></i>${greet}</span><div class="bubble">${title}. ${advice}</div></div></div>
-      ${R ? `<div class="hero-row" style="margin-top:14px">${ringsHTML(R.parts, R.score)}${ringsLegend(R.parts)}</div>` : ''}`;
+    hero.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>${greet}</span>${R ? `<span class="pill ${R.score >= 80 ? 'good' : R.score >= 60 ? 'warn' : 'bad'}">${R.score >= 80 ? 'via libera' : R.score >= 60 ? 'con giudizio' : 'ai box'}</span>` : ''}</div>
+      <div class="lede"><h2>${title}</h2><p>${advice}</p></div>
+      ${R ? tachoHTML(R.score) + sectorsHTML(R.parts) : ''}`;
     v.appendChild(hero);
 
     // check-in
@@ -666,7 +658,7 @@
       const sec = h('section', ''); sec.style.display = 'grid'; sec.style.gap = '10px';
       sec.appendChild(h('div', 'chead', `<span class="eyebrow"><i></i>Per te oggi</span><button class="more" id="allIns">Tutti gli insight ›</button>`));
       const car = h('div', 'carousel');
-      stories.forEach(s => { const c = h('div', 'story', `<span class="ic">${icon(s.i)}</span><span class="tag n">${s.tag}</span><p>${s.t}</p>${s.tip ? '<p class="tip">' + s.tip + '</p>' : ''}`); c.style.setProperty('--k', s.k);
+      stories.forEach(s => { const c = h('div', 'story', `<span class="ic">${icon(s.i)}</span><span class="tag n">${s.tag}</span><p>${s.t}</p>${s.tip ? '<p class="tip">' + s.tip + '</p>' : ''}`); c.style.setProperty('--k', s.k === 'var(--c-insight)' ? 'var(--c-insight)' : s.k);
         c.style.setProperty('--sg', { 'var(--bad)': 'var(--g-sport)', 'var(--warn)': 'linear-gradient(135deg, #feca57, #ff9f43)', 'var(--good)': 'var(--g-corpo)', 'var(--c-insight)': 'var(--g-insight)' }[s.k] || 'var(--g-oggi)'); if (s.go) { c.style.cursor = 'pointer'; c.onclick = () => go(s.go); } car.appendChild(c); });
       sec.appendChild(car);
       const dn = h('div', 'dotsnav', stories.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')); sec.appendChild(dn);
