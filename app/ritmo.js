@@ -3,14 +3,15 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '17 nov 2026 · v3.2';
+  const RELEASE = '18 nov 2026 · v5';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
-  const FONTS = 'https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap';
+  const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
   const MARKUP = `<div class="aurora" aria-hidden="true"></div>
-<header class="top"><div class="top-in">
+<header class="top" id="top"><div class="top-in">
   <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 13h4l2.5-6 4 11 3-8 2 3H22"/></svg></span><div><b>Ritmo</b><span id="hello"></span></div></div>
-  <button class="iconbtn" id="insightBtn" aria-label="Insight"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button>
+  <span id="ttl"></span>
+  <div class="top-right"><button class="iconbtn" id="insightBtn" aria-label="Insight"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button></div>
 </div></header>
 <main id="main"></main>
 <button class="fab" id="fab" aria-label="Check-in: come ti senti"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -91,6 +92,8 @@
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>'
   };
   const icon = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k] || ICON.act}</svg>`;
+  // Colori di sezione: --sec (tinta) e --g (gradiente) presi dai token CSS.
+  const paint = (el, key) => { el.style.setProperty('--sec', `var(--c-${key})`); el.style.setProperty('--g', `var(--g-${key})`); return el; };
   const SPORT = {
     running: ['Corsa', 'run'], trail_running: ['Trail', 'run'], treadmill_running: ['Tapis roulant', 'run'], walking: ['Camminata', 'walk'], hiking: ['Escursione', 'walk'],
     cycling: ['Bici', 'bike'], road_biking: ['Bici da strada', 'bike'], mountain_biking: ['MTB', 'bike'], indoor_cycling: ['Bici indoor', 'bike'], virtual_ride: ['Bici virtuale', 'bike'],
@@ -280,6 +283,23 @@
   // Componenti grafici
   // =========================================================================
   const W = 360;
+  // Curva morbida (monotona: non inventa picchi) con interruzioni dove mancano dati.
+  function smoothPath(pts, gap, smooth) {
+    const segs = []; let cur = [];
+    pts.forEach((p, i) => { if (i && gap && p[2] - pts[i - 1][2] > gap) { segs.push(cur); cur = []; } cur.push(p); });
+    if (cur.length) segs.push(cur);
+    return segs.map(seg => {
+      if (!smooth || seg.length < 3) return seg.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+      const n = seg.length, dx = [], m = [], t = [];
+      for (let i = 0; i < n - 1; i++) { dx[i] = seg[i + 1][0] - seg[i][0]; m[i] = dx[i] ? (seg[i + 1][1] - seg[i][1]) / dx[i] : 0; }
+      t[0] = m[0]; t[n - 1] = m[n - 2];
+      for (let i = 1; i < n - 1; i++) t[i] = m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2;
+      let d = 'M' + seg[0][0].toFixed(1) + ',' + seg[0][1].toFixed(1);
+      for (let i = 0; i < n - 1; i++) { const h3 = dx[i] / 3;
+        d += ` C${(seg[i][0] + h3).toFixed(1)},${(seg[i][1] + t[i] * h3).toFixed(1)} ${(seg[i + 1][0] - h3).toFixed(1)},${(seg[i + 1][1] - t[i + 1] * h3).toFixed(1)} ${seg[i + 1][0].toFixed(1)},${seg[i + 1][1].toFixed(1)}`; }
+      return d;
+    }).join(' ');
+  }
   function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw || 1))), f = raw / p; return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p; }
   function lineChart(host, o) {
     const H = o.h || 190, PL = o.pl || 34, PR = 10, PT = 14, PB = 22;
@@ -310,7 +330,7 @@
     const draws = [];
     o.series.forEach(s => {
       const d = s.data.filter(p => isNum(p[1])); if (!d.length) return;
-      const path = d.map((p, i) => (i && !(s.gap && p[0] - d[i - 1][0] > s.gap) ? 'L' : 'M') + X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ');
+      const path = smoothPath(d.map(p => [X(p[0]), Y(p[1]), p[0]]), s.gap, s.smooth !== false && s.line !== false);
       if (s.area) {
         const gid = 'g' + Math.random().toString(36).slice(2, 8);
         const gr = svgEl('linearGradient', { id: gid, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
@@ -320,7 +340,10 @@
       if (s.dots) d.forEach(p => svgEl('circle', { class: 'fade', cx: X(p[0]), cy: Y(p[1]), r: s.dots, fill: s.dotColor ? s.dotColor(p) : s.color, 'fill-opacity': s.dotOpacity || 1 }, svg));
       if (s.line !== false) {
         if (s.glow) svgEl('path', { class: 'fade', d: path, fill: 'none', stroke: s.color, 'stroke-width': 6, opacity: .18, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
-        draws.push(svgEl('path', { class: 'draw', d: path, fill: 'none', stroke: s.color, 'stroke-width': s.w || 2.2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'stroke-dasharray': s.dash || '', opacity: s.opacity || 1 }, svg));
+        let stroke = s.color;
+        if (s.grad) { const lid = 'l' + Math.random().toString(36).slice(2, 8); const lg = svgEl('linearGradient', { id: lid, x1: 0, y1: 0, x2: 1, y2: 0 }, defs);
+          svgEl('stop', { offset: 0, 'stop-color': s.color }, lg); svgEl('stop', { offset: 1, 'stop-color': s.grad }, lg); stroke = `url(#${lid})`; }
+        draws.push(svgEl('path', { class: 'draw', d: path, fill: 'none', stroke: stroke, 'stroke-width': s.w || 2.2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'stroke-dasharray': s.dash || '', opacity: s.opacity || 1 }, svg));
       }
     });
     if (o.mark) { const m = o.mark; svgEl('circle', { cx: X(m[0]), cy: Y(m[1]), r: 8, fill: m[2] || 'var(--sec)', 'fill-opacity': .22 }, svg); svgEl('circle', { cx: X(m[0]), cy: Y(m[1]), r: 3.8, fill: m[2] || 'var(--sec)', stroke: 'var(--surface)', 'stroke-width': 1.6 }, svg); }
@@ -390,9 +413,53 @@
       <line x1="100" y1="100" x2="${n[0].toFixed(1)}" y2="${n[1].toFixed(1)}" stroke="var(--fg)" stroke-width="3.5" stroke-linecap="round"/><circle cx="100" cy="100" r="7" fill="var(--fg)"/>
       <text x="20" y="116" text-anchor="middle">400</text><text x="180" y="116" text-anchor="middle">1600</text></svg>`;
   };
+  // Contagiri del recupero: arco di 240 gradi con tacche ogni 10, lancetta e numero in corsivo.
+  const tachoHTML = score => {
+    const cx = 120, cy = 120, R = 96, A0 = 150, SW = 240, v = isNum(score) ? clamp(score, 0, 100) : 0;
+    const pt = (f, r) => { const a = (A0 + f * SW) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+    const arcD = (f0, f1, r) => { const p0 = pt(f0, r), p1 = pt(f1, r); return `M${p0[0].toFixed(1)},${p0[1].toFixed(1)} A${r},${r} 0 ${(f1 - f0) * SW > 180 ? 1 : 0} 1 ${p1[0].toFixed(1)},${p1[1].toFixed(1)}`; };
+    const L = 2 * Math.PI * R * SW / 360;
+    const ticks = [...Array(51)].map((_, i) => { const f = i / 50, big = i % 5 === 0, a = pt(f, R - 12), c = pt(f, R - (big ? 21 : 16));
+      return `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${c[0].toFixed(1)}" y2="${c[1].toFixed(1)}" stroke="${i <= 20 ? 'var(--bad)' : 'rgba(255,255,255,.35)'}" stroke-width="${big ? 1.6 : .8}" opacity="${big ? .9 : .5}"/>`; }).join('');
+    const nums = [0, 20, 40, 60, 80, 100].map(n => { const q = pt(n / 100, R - 31); return `<text x="${q[0].toFixed(1)}" y="${(q[1] + 3).toFixed(1)}" text-anchor="middle">${n}</text>`; }).join('');
+    const ang = A0 + (v / 100) * SW + 90, tip = R - 24;
+    return `<svg class="tacho" viewBox="0 0 240 200" role="img" aria-label="Recupero ${isNum(score) ? score : 'non disponibile'} su 100">
+      <defs><linearGradient id="tg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3d6bff"/><stop offset=".55" stop-color="#ffb27a"/><stop offset="1" stop-color="#ff6a2b"/></linearGradient></defs>
+      <path d="${arcD(0, 1, R)}" stroke="rgba(255,255,255,.07)" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <path class="arc" d="${arcD(0, 1, R)}" stroke="url(#tg)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="${L.toFixed(1)}" stroke-dashoffset="${L.toFixed(1)}" data-to="${(L * (1 - v / 100)).toFixed(1)}" style="filter:drop-shadow(0 0 8px rgba(255,122,60,.55))"/>
+      ${ticks}${nums}
+      <g class="needle" style="transform:rotate(${A0 + 90}deg)" data-rot="${ang.toFixed(1)}"><line x1="${cx}" y1="${cy + 14}" x2="${cx}" y2="${cy - tip}" stroke="#ff6a2b" stroke-width="2.4" stroke-linecap="round" style="filter:drop-shadow(0 0 6px #ff6a2b)"/></g>
+      <circle cx="${cx}" cy="${cy}" r="6" fill="#0b0d14" stroke="#ff6a2b" stroke-width="2"/>
+      <text class="tn" x="${cx}" y="${cy + 46}" text-anchor="middle" data-count="${isNum(score) ? score : ''}">${isNum(score) ? '0' : '-'}</text>
+      <text class="tl" x="${cx}" y="${cy + 62}" text-anchor="middle">RECUPERO / 100</text></svg>`;
+  };
+  // Settori come nei tempi di F1: viola = ottimo, verde = buono, giallo = sotto.
+  const secCol = v => v >= 90 ? 'var(--purple)' : v >= 70 ? 'var(--good)' : 'var(--warn)';
+  const sectorsHTML = parts => '<div class="sectors">' + parts.slice(0, 4).map((p, i) => `<div class="sector" style="--sc:${secCol(p.v)}"><span class="sk">S${i + 1}</span><span class="sn">${p.k}</span><b data-count="${Math.round(p.v)}">0</b></div>`).join('') + '</div>'
+    + '<div class="seclegend"><span><i style="background:var(--purple)"></i>ottimo</span><span><i style="background:var(--good)"></i>buono</span><span><i style="background:var(--warn)"></i>sotto la media</span></div>';
+  // Quadrante del sonno: orologio di 24 ore con l'arco della notte e l'orario medio.
+  const dialHTML = (n, avgB, avgE) => {
+    const b = bedMin(n.bed_start), e = bedMin(n.bed_end); if (b === null || e === null) return '';
+    const ang = m => ((m / 1440) * 360 - 90) * Math.PI / 180;
+    const pt = (m, r) => [100 + r * Math.cos(ang(m)), 100 + r * Math.sin(ang(m))];
+    const arc = (m0, m1, r) => { let d = m1 - m0; if (d < 0) d += 1440; const p0 = pt(m0, r), p1 = pt(m0 + d, r); return `M${p0[0].toFixed(1)},${p0[1].toFixed(1)} A${r},${r} 0 ${d > 720 ? 1 : 0} 1 ${p1[0].toFixed(1)},${p1[1].toFixed(1)}`; };
+    const ticks = [...Array(24)].map((_, hh) => { const a = pt(hh * 60, 86), c = pt(hh * 60, hh % 6 ? 81 : 77); return `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${c[0].toFixed(1)}" y2="${c[1].toFixed(1)}" stroke="var(--line-2)" stroke-width="${hh % 6 ? 1 : 2}" stroke-linecap="round"/>`; }).join('');
+    const lab = [[0, '00'], [360, '06'], [720, '12'], [1080, '18']].map(x => { const q = pt(x[0], 66); return `<text x="${q[0].toFixed(1)}" y="${(q[1] + 3.5).toFixed(1)}" text-anchor="middle">${x[1]}</text>`; }).join('');
+    const avg = isNum(avgB) && isNum(avgE) ? `<path d="${arc(avgB, avgE, 94)}" stroke="var(--faint)" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="2 5"/>` : '';
+    const mB = pt(b, 92), mE = pt(e, 92);
+    return `<svg class="dial" viewBox="0 0 200 200" role="img" aria-label="Orario del sonno">
+      <defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3d6bff"/><stop offset="1" stop-color="#b46cff"/></linearGradient></defs>
+      <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="14"/>${avg}${ticks}${lab}
+      <path class="draw" d="${arc(b, e, 92)}" stroke="url(#dg)" stroke-width="14" fill="none" stroke-linecap="round" style="filter:drop-shadow(0 0 8px rgba(76,141,255,.55))"/>
+      <circle cx="${mB[0].toFixed(1)}" cy="${mB[1].toFixed(1)}" r="9" fill="#0b0d14" stroke="#4c8dff" stroke-width="2"/><text x="${mB[0].toFixed(1)}" y="${(mB[1] + 3.5).toFixed(1)}" text-anchor="middle" style="font-size:9px;fill:#8ab4ff">☾</text>
+      <circle cx="${mE[0].toFixed(1)}" cy="${mE[1].toFixed(1)}" r="9" fill="#0b0d14" stroke="#ff7a3c" stroke-width="2"/><text x="${mE[0].toFixed(1)}" y="${(mE[1] + 3.5).toFixed(1)}" text-anchor="middle" style="font-size:9px;fill:#ffb27a">☀</text>
+      <text class="dc" x="100" y="102" text-anchor="middle">${hm(n.sleep_h)}</text><text class="ds" x="100" y="118" text-anchor="middle">${esc(n.bed_start)} → ${esc(n.bed_end)}</text></svg>`;
+  };
+  const confetti = () => { const f = h('div', 'flash'); document.body.appendChild(f); setTimeout(() => f.remove(), 1300); };
   const animate = root => {
     raf2(() => {
       root.querySelectorAll('[data-to]').forEach(a => a.setAttribute('stroke-dashoffset', a.dataset.to));
+      root.querySelectorAll('[data-rot]').forEach(n => { n.style.transform = `rotate(${n.dataset.rot}deg)`; });
       root.querySelectorAll('[data-count]').forEach(n => { if (n.dataset.count !== '') countUp(n, +n.dataset.count, +(n.dataset.dec || 0)); });
       root.querySelectorAll('[data-w]').forEach(n => { n.style.width = n.dataset.w; });
       root.querySelectorAll('[data-hgt]').forEach(n => { n.style.height = n.dataset.hgt; });
@@ -461,7 +528,7 @@
   const todayMood = () => MOOD.find(m => m.date === today) || null;
   const openCheckin = pre => sheet((box, close) => {
     const cur = Object.assign({ energy: null, mood: null, pain: 0, note: '' }, todayMood() || {}, pre || {});
-    box.style.setProperty('--sec', 'var(--c-insight)');
+    paint(box, 'insight');
     box.innerHTML = `<div><span class="eyebrow"><i></i>Check-in · ${GIORNI[dow(today)]} ${dLabel(today)}</span><h2 style="margin-top:6px">Come ti senti oggi?</h2>
       <p class="muted small" style="margin-top:4px">Pochi secondi. Ritmo collega le risposte a sonno, recupero e allenamenti.</p></div>`;
     const scale = (key, labels, title) => {
@@ -489,7 +556,7 @@
       save.disabled = true; save.textContent = 'Salvo...';
       run.withSuccessHandler(r => {
         MOOD = MOOD.filter(m => m.date !== r.date).concat([r]); ANALYSIS = null;
-        close(); toast('Check-in salvato'); buzz(); updateFab(); rerender();
+        close(); toast('Check-in salvato!'); confetti(); buzz(); updateFab(); rerender();
       }).withFailureHandler(err => { save.disabled = false; save.textContent = 'Salva'; toast('Non salvato: ' + (err && err.message ? err.message : 'errore')); }).ritmoSaveCheckin(payload);
     };
     box.appendChild(save);
@@ -519,14 +586,17 @@
     const i = TABS.findIndex(t => t[0] === id);
     const col = i >= 0 ? TABS[i][2] : '--c-insight';
     document.documentElement.style.setProperty('--sec', `var(${col})`);
+    document.documentElement.style.setProperty('--g', `var(${col.replace('--c-', '--g-')})`);
+    $('#ttl').textContent = i >= 0 ? TABS[i][1] : 'Insight';
     pill.style.opacity = i >= 0 ? '1' : '0';
-    if (i >= 0) { pill.style.transform = `translateX(${i * 100}%)`; pill.style.setProperty('--tc', `var(${col})`); }
+    if (i >= 0) { pill.style.transform = `translateX(${i * 100}%)`; pill.style.setProperty('--tc', `var(${col})`); pill.style.setProperty('--tg', `var(${col.replace('--c-', '--g-')})`); }
     tabsEl.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-current', b.dataset.id === id ? 'page' : 'false'));
     const dir = i < 0 ? '' : prevTab === id ? '' : i > lastIdx ? 'from-right' : 'from-left';
     if (i >= 0) lastIdx = i;
     render(dir);
     window.scrollTo(0, 0);
   };
+  addEventListener('scroll', () => { $('#top').classList.toggle('compact', window.scrollY > 40); }, { passive: true });
   const render = dir => {
     main.innerHTML = '';
     const v = h('div', 'view' + (dir ? ' ' + dir : '')); main.appendChild(v);
@@ -553,17 +623,18 @@
     const R = readiness(lastG);
     const title = !R ? 'Dati del sonno in arrivo' : R.score >= 80 ? 'Pronto per la giornata' : R.score >= 65 ? 'Recupero discreto' : R.score >= 50 ? 'Vai con calma oggi' : 'Giornata di recupero';
     const advice = !R ? 'Garmin aggiorna i dati ogni mattina alle 10.' : R.score >= 80 ? 'Corpo recuperato: buona giornata per carichi e impegni.' : R.score >= 65 ? 'Recupero nella media: ascolta come ti senti.' : 'Il corpo chiede recupero: riposo, idratazione e un orario regolare stasera.';
-    const COL = { Sonno: 'var(--c-sonno)', HRV: 'var(--c-insight)', Riposo: 'var(--c-corpo)', Energia: 'var(--c-sport)' };
     const hero = h('section', 'hero');
-    hero.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Recupero di oggi</span><span class="pill ${R ? state(R.score) : ''}">${R ? (R.score >= 80 ? 'alto' : R.score >= 60 ? 'medio' : 'basso') : '-'}</span></div>
-      <div class="hero-row" style="margin-top:12px">${ringHTML(R ? R.score : null, 'recupero')}<div style="display:grid;gap:8px;min-width:0"><h2>${title}</h2><p class="muted small">${advice}</p></div></div>
-      ${R ? '<div class="gauges" style="margin-top:16px">' + R.parts.map(p => gaugeHTML(p.v, p.k, COL[p.k])).join('') + '</div>' : ''}`;
+    const hrs = +((DATA.now || '').slice(11, 13) || 12);
+    const greet = hrs < 5 ? 'Ancora sveglio?' : hrs < 13 ? 'Buongiorno!' : hrs < 18 ? 'Buon pomeriggio!' : 'Buonasera!';
+    hero.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>${greet}</span>${R ? `<span class="pill ${R.score >= 80 ? 'good' : R.score >= 60 ? 'warn' : 'bad'}">${R.score >= 80 ? 'via libera' : R.score >= 60 ? 'con giudizio' : 'ai box'}</span>` : ''}</div>
+      <div class="lede"><h2>${title}</h2><p>${advice}</p></div>
+      ${R ? tachoHTML(R.score) + sectorsHTML(R.parts) : ''}`;
     v.appendChild(hero);
 
     // check-in
     const tm = todayMood();
     const ci = h('section', 'card tap');
-    ci.style.setProperty('--sec', 'var(--c-insight)');
+    paint(ci, 'insight');
     if (!tm) {
       ci.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Check-in</span><span class="more">30 secondi ›</span></div><h3 style="font-size:1.15rem">Come ti senti oggi?</h3><p class="muted small">Scegli la tua energia: poi umore e dolore.</p>`;
       const sc = h('div', 'scale');
@@ -587,7 +658,8 @@
       const sec = h('section', ''); sec.style.display = 'grid'; sec.style.gap = '10px';
       sec.appendChild(h('div', 'chead', `<span class="eyebrow"><i></i>Per te oggi</span><button class="more" id="allIns">Tutti gli insight ›</button>`));
       const car = h('div', 'carousel');
-      stories.forEach(s => { const c = h('div', 'story', `<span class="ic">${icon(s.i)}</span><span class="tag n">${s.tag}</span><p>${s.t}</p>${s.tip ? '<p class="tip">' + s.tip + '</p>' : ''}`); c.style.setProperty('--k', s.k); if (s.go) { c.style.cursor = 'pointer'; c.onclick = () => go(s.go); } car.appendChild(c); });
+      stories.forEach(s => { const c = h('div', 'story', `<span class="ic">${icon(s.i)}</span><span class="tag n">${s.tag}</span><p>${s.t}</p>${s.tip ? '<p class="tip">' + s.tip + '</p>' : ''}`); c.style.setProperty('--k', s.k === 'var(--c-insight)' ? 'var(--c-insight)' : s.k);
+        c.style.setProperty('--sg', { 'var(--bad)': 'var(--g-sport)', 'var(--warn)': 'linear-gradient(135deg, #feca57, #ff9f43)', 'var(--good)': 'var(--g-corpo)', 'var(--c-insight)': 'var(--g-insight)' }[s.k] || 'var(--g-oggi)'); if (s.go) { c.style.cursor = 'pointer'; c.onclick = () => go(s.go); } car.appendChild(c); });
       sec.appendChild(car);
       const dn = h('div', 'dotsnav', stories.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')); sec.appendChild(dn);
       car.addEventListener('scroll', () => { const w = car.firstElementChild ? car.firstElementChild.getBoundingClientRect().width + 12 : 1; const i = Math.round(car.scrollLeft / w); dn.querySelectorAll('i').forEach((d, j) => d.classList.toggle('on', j === i)); }, { passive: true });
@@ -598,7 +670,7 @@
     // ultime notti
     const last7 = nights.filter(n => isNum(n.score)).slice(-7);
     if (last7.length) {
-      const c = h('section', 'card tap'); c.style.setProperty('--sec', 'var(--c-sonno)');
+      const c = h('section', 'card tap'); paint(c, 'sonno');
       c.appendChild(h('div', 'chead', `<span class="eyebrow"><i></i>Le tue ultime notti</span><span class="more">Sonno ›</span>`));
       c.appendChild(timeline(last7, L.date, d => go('sonno', { night: d })));
       c.onclick = e => { if (!e.target.closest('.tlrow')) go('sonno'); };
@@ -608,10 +680,10 @@
     // scorciatoie
     const g = h('div', 'grid2');
     const rm = DATA.room;
-    const ca = h('section', 'card tap'); ca.style.setProperty('--sec', 'var(--c-casa)');
+    const ca = h('section', 'card tap color'); paint(ca, 'casa');
     ca.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Casa</span><span class="more">›</span></div>${rm ? `${semiHTML(rm.co2)}<div style="text-align:center;margin-top:-8px"><div class="mid ${co2State(rm.co2)}"><span data-count="${rm.co2}">0</span><small>ppm</small></div><p class="muted xs">${fmt(rm.temp, 1)} °C · ${fmt(rm.rh)} %</p></div>` : '<p class="muted small">Nessun dato</p>'}`;
     ca.onclick = () => go('casa'); g.appendChild(ca);
-    const sp = h('section', 'card tap'); sp.style.setProperty('--sec', 'var(--c-sport)');
+    const sp = h('section', 'card tap color'); paint(sp, 'sport');
     const MD = minByDay(), wk = [...Array(7)].map((_, i) => addDays(today, i - 6)), wkMin = wk.map(d => MD[d] || 0), mx = Math.max(30, Math.max.apply(null, wkMin));
     sp.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Sport</span><span class="more">›</span></div><div class="mid"><span data-count="${Math.round(sum(wkMin))}">0</span><small>min in 7 giorni</small></div>
       <div class="bars" style="grid-template-columns:repeat(7,minmax(0,1fr))">${wk.map((d, i) => `<div class="bar ${wkMin[i] ? '' : 'dim'}"><div class="col" style="height:46px"><div class="fill" data-hgt="${Math.max(6, 100 * wkMin[i] / mx).toFixed(0)}%"></div></div><span class="k">${GG[dow(d)].slice(0, 1).toUpperCase()}</span></div>`).join('')}</div>`;
@@ -619,7 +691,7 @@
     v.appendChild(g);
     if (body.length) {
       const lb = body[body.length - 1], old = body.filter(b => b.date <= addDays(lb.date, -30)), o30 = old.length ? old[old.length - 1] : null, dW = o30 ? lb.w - o30.w : null;
-      const co = h('section', 'card tap'); co.style.setProperty('--sec', 'var(--c-corpo)');
+      const co = h('section', 'card tap'); paint(co, 'corpo');
       co.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Corpo</span><span class="more">›</span></div><div class="row-wrap" style="align-items:baseline"><div class="big"><span data-count="${lb.w}" data-dec="1">0</span><small>kg</small></div>${dW !== null ? `<span class="pill ${dW > 0 ? 'warn' : 'good'}">${dW > 0 ? '+' : ''}${fmt(dW, 1)} kg in 30 giorni</span>` : ''}</div><div class="sp"></div><p class="muted xs">ultima pesata ${dLabelY(lb.date)} · grasso ${fmt(lb.fat, 1)} %</p>`;
       const pts = body.filter(b => b.date >= addDays(lb.date, -180)).map(b => [dayNum(b.date), b.w, b.date]);
       if (pts.length >= 3) lineChart($('.sp', co), { h: 80, pl: 6, series: [{ data: pts, color: 'var(--c-corpo)', area: true, w: 2, glow: true }], tip: p => `${dLabel(p[2])} · <b>${fmt(p[1], 1)}</b> kg`, aria: 'Peso ultimi 6 mesi', yFmt: () => '' });
@@ -629,7 +701,7 @@
 
     // settimana
     const wkd = weekly();
-    const wc = h('section', 'card tap'); wc.style.setProperty('--sec', 'var(--c-oggi)');
+    const wc = h('section', 'card tap color'); paint(wc, 'oggi');
     const best = wkd.M.filter(m => isNum(m.z)).sort((a, b) => Math.abs(b.z) - Math.abs(a.z))[0];
     wc.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>La tua settimana</span><span class="more">Apri ›</span></div><h3 style="font-size:1.1rem">${wkd.label}</h3>
       <p class="muted small">${wkd.n} notti${best ? ` · ${best.l.toLowerCase()} ${fmt(best.now, best.dec)}${best.u} (prima ${fmt(best.was, best.dec)}${best.u})` : ''}</p>`;
@@ -641,13 +713,13 @@
     if (rs.length >= 5) {
       const c = h('section', 'card');
       c.appendChild(h('div', 'chead', `<span class="eyebrow"><i></i>Recupero, 30 giorni</span><span class="muted small">media ${fmt(avg(rs.map(p => p[1])))}</span>`));
-      lineChart(c, { h: 130, series: [{ data: rs, color: 'var(--c-oggi)', area: true, w: 2.4, glow: true }], yMin: 30, yMax: 100, bands: [[80, 101, 'var(--band-good)']], xTicks: dateTicks,
+      lineChart(c, { h: 130, series: [{ data: rs, color: 'var(--c-oggi)', grad: 'var(--gum)', area: true, w: 3, glow: true }], yMin: 30, yMax: 100, bands: [[80, 101, 'var(--band-good)']], xTicks: dateTicks,
         tip: p => `${dLabel(p[2])} · recupero <b>${fmt(p[1])}</b>`, onPick: p => go('sonno', { night: p[2] }), aria: 'Recupero negli ultimi 30 giorni' });
       v.appendChild(c);
     }
   }
   const openWeek = w => sheet(box => {
-    box.style.setProperty('--sec', 'var(--c-oggi)');
+    paint(box, 'oggi');
     box.innerHTML = `<div><span class="eyebrow"><i></i>La tua settimana</span><h2 style="margin-top:6px">${w.label}</h2><p class="muted small">Confronto con le 4 settimane precedenti · ${w.n} notti</p></div>`;
     const moves = w.M.filter(m => isNum(m.z) && Math.abs(m.z) >= .5).sort((a, b) => Math.abs(b.z) - Math.abs(a.z)).slice(0, 3);
     if (moves.length) box.appendChild(h('div', 'card flat', '<span class="eyebrow">Cosa è cambiato</span>' + moves.map(m => { const good = (m.now - m.was) * m.better > 0;
@@ -672,7 +744,8 @@
     if (!list.length) { v.appendChild(h('p', 'empty', 'Nessuna notte ancora.')); return; }
     if (!S.night || !byDate[S.night]) S.night = list[list.length - 1].date;
     const idx = list.findIndex(n => n.date === S.night), n = list[idx];
-    const card = h('section', 'hero');
+    const card = h('section', 'hero night');
+    card.appendChild(h('span', 'moon'));
     const nav = h('div', 'nightnav');
     const prev = h('button', 'arr', '‹'), next = h('button', 'arr', '›');
     prev.setAttribute('aria-label', 'Notte precedente'); next.setAttribute('aria-label', 'Notte successiva');
@@ -703,6 +776,11 @@
     v.appendChild(card);
     const notes = nightNotes(n);
     if (notes.length) v.appendChild(h('section', 'card', notes.map(noteHTML).join('')));
+    if (isNum(n.score) && n.bed_start && n.bed_end) {
+      const prev = nights.filter(x => x.date < n.date && bedMin(x.bed_start) !== null && bedMin(x.bed_end) !== null).slice(-14);
+      const dial = dialHTML(n, prev.length >= 5 ? median(prev.map(x => bedMin(x.bed_start))) : null, prev.length >= 5 ? median(prev.map(x => bedMin(x.bed_end))) : null);
+      if (dial) { const c = h('section', 'card'); c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Orario del sonno</span><span class="muted xs">tratteggio: il tuo solito</span></div>${dial}`; v.appendChild(c); }
+    }
     const ns = (DATA.nightSeries || {})[n.date];
     if (ns && ns.pts.length >= 6) {
       const c = h('section', 'card');
@@ -739,7 +817,7 @@
       const roll = pts.map((p, i) => [p[0], avg(pts.slice(Math.max(0, i - 6), i + 1).map(q => q[1]))]);
       c2.appendChild(h('div', 'row-wrap', `<div class="mid">${isBed ? clock(mean) : fmt(mean, m[2])}<small>${m[3]}</small></div><span class="muted small">media · ${pts.length} notti</span>`));
       const sel = pts.find(p => p[2] === n.date);
-      lineChart(c2, { h: 200, series: [{ data: pts, color: 'var(--c-sonno)', line: false, dots: pts.length > 60 ? 2.2 : 3.2, dotOpacity: .55 }, { data: roll, color: 'var(--c-sonno)', w: 2.6, area: !isBed, glow: true }],
+      lineChart(c2, { h: 200, series: [{ data: pts, color: 'var(--c-sonno)', line: false, dots: pts.length > 60 ? 2.2 : 3.2, dotOpacity: .55 }, { data: roll, color: 'var(--c-sonno)', grad: 'var(--gum)', w: 3, area: !isBed, glow: true }],
         hlines: [[mean, 'var(--faint)']], xTicks: dateTicks, yFmt: isBed ? (v2 => clock(v2)) : null, mark: sel ? [sel[0], sel[1], 'var(--c-casa)'] : null,
         tip: p => `${dLabel(p[2])} · <b>${isBed ? clock(p[1]) : fmt(p[1], m[2])}</b> ${m[3]}`, onPick: p => { S.night = p[2]; rerender(); window.scrollTo({ top: 0, behavior: 'smooth' }); }, aria: 'Andamento ' + m[0] });
       c2.appendChild(h('div', 'legend', '<span><i class="sw" style="background:var(--c-sonno);height:8px;width:8px;border-radius:50%;opacity:.55"></i>notti</span><span><i class="sw" style="background:var(--c-sonno)"></i>media su 7 notti</span><span><i class="sw" style="background:var(--faint)"></i>media</span>'));
@@ -805,7 +883,7 @@
     lc.appendChild(ls); v.appendChild(lc);
   }
   const openActivity = a => sheet(box => {
-    const sp = sportOf(a.type); box.style.setProperty('--sec', 'var(--c-sport)');
+    const sp = sportOf(a.type); paint(box, 'sport');
     const night = byDate[addDays(a.date, 1)];
     box.innerHTML = `<div class="row-wrap"><span class="lrow" style="border:0;padding:0;grid-template-columns:40px"><span class="ai">${icon(sp[1])}</span></span><div><span class="eyebrow">${sp[0]} · ${cap(GIORNI[dow(a.date)])} ${dLabelY(a.date)}</span><h2>${esc(a.name || sp[0])}</h2></div></div>
       <div class="grid3">${stat('Durata', fmt(a.min), 'min', a.time ? 'alle ' + esc(a.time) : '', '')}${stat('Distanza', isNum(a.km) && a.km > 0 ? fmt(a.km, 2) : '-', 'km', isNum(a.km) && a.km > 0 && isNum(a.min) ? fmt(a.min / a.km, 1) + ' min/km' : '', '')}${stat('Calorie', fmt(a.kcal), 'kcal', '', '')}
@@ -829,7 +907,7 @@
       const first = pts[0], last = pts[pts.length - 1], d = last[1] - first[1], good = d * m[3] >= 0;
       hero.appendChild(h('div', 'row-wrap', `<div class="big"><span data-count="${last[1]}" data-dec="${m[2]}">0</span><small>${m[1]}</small></div>${pts.length > 1 ? `<span class="pill ${Math.abs(d) < .05 ? '' : good ? 'good' : 'warn'}">${d > 0 ? '+' : ''}${fmt(d, m[2])} ${m[1]} dal ${dLabelY(first[2])}</span>` : ''}`)).style.marginTop = '12px';
       const roll = pts.map((p, i) => [p[0], avg(pts.slice(Math.max(0, i - 2), i + 3).map(q => q[1]))]);
-      lineChart(hero, { h: 210, series: [{ data: pts, color: 'var(--muted)', line: false, dots: pts.length > 80 ? 1.8 : 2.8, dotOpacity: .55 }, { data: roll, color: 'var(--c-corpo)', area: true, w: 2.6, glow: true }],
+      lineChart(hero, { h: 210, series: [{ data: pts, color: 'var(--muted)', line: false, dots: pts.length > 80 ? 1.8 : 2.8, dotOpacity: .55 }, { data: roll, color: 'var(--c-corpo)', grad: 'var(--sky)', area: true, w: 3, glow: true }],
         xTicks: dateTicks, tip: p => `${dLabelY(p[2])} · <b>${fmt(p[1], m[2])}</b> ${m[1]}`, aria: 'Andamento ' + m[0] });
     } else hero.appendChild(h('p', 'empty', 'Nessuna pesata in questo periodo.'));
     hero.appendChild(chips([[90, '3 m'], [365, '1 a'], [1095, '3 a'], [99999, 'Tutto']], S.cPeriod, k => { S.cPeriod = k; save(); rerender(); }, true));
@@ -931,7 +1009,7 @@
     });
     else v.appendChild(h('p', 'empty', 'Per ora nessuna relazione abbastanza solida per questo filtro. Le scoperte compaiono man mano che i dati crescono.'));
     if (MOOD.length >= 2) {
-      const c = h('section', 'card'); c.style.setProperty('--sec', 'var(--c-insight)');
+      const c = h('section', 'card'); paint(c, 'insight');
       c.appendChild(h('div', 'chead', `<span class="eyebrow"><i></i>Come ti sei sentito</span><span class="muted small">${MOOD.length} check-in</span>`));
       const ms = MOOD.slice().sort((a, b) => a.date < b.date ? -1 : 1).slice(-60);
       lineChart(c, { h: 150, series: [{ data: ms.map(m => [dayNum(m.date), m.energy, m.date]), color: 'var(--c-sport)', w: 2.4, dots: 3 }, { data: ms.map(m => [dayNum(m.date), m.mood, m.date]), color: 'var(--c-insight)', w: 2.4, dots: 3 }],
