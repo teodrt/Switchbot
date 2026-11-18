@@ -73,6 +73,7 @@ function safeStatus_(getId) {
  * e il motivo finisce nella colonna "note".
  */
 function logReading() {
+  if (!PropertiesService.getScriptProperties().getProperty('SWITCHBOT_TOKEN')) return;   // senza sensore proprio (es. aria condivisa): niente da leggere
   const sheet = SpreadsheetApp.openById(cfg_('SHEET_ID')).getSheets()[0];
   if (sheet.getRange('F1').getValue() === '') {
     sheet.getRange('F1:I1').setValues([['hub_temp_c', 'hub_rh_pct', 'hub_light', 'note']]);

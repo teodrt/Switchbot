@@ -12,6 +12,7 @@ const E_TZ = 'Europe/Madrid';
 // cercava; se no si riprova ogni retryMin minuti fino a giveUp (poi il giorno è chiuso comunque).
 const E_JOBS = [
   { id: 'switchbot', fn: 'logReading', every: true },
+  { id: 'air', fn: 'airSync', every: true },
   { id: 'garmin', fn: 'garminDaily', daily: '07:30', until: 'gHasToday_', retryMin: 30, giveUp: '13:00' },
   { id: 'reminder', fn: 'nCheckinReminder', daily: '12:00' },
   { id: 'renpho', fn: 'renphoDaily', daily: '11:00' },
@@ -20,8 +21,24 @@ const E_JOBS = [
 
 // Operazioni una tantum: girano una volta sola, al primo giro utile, una per giro.
 const E_MIGRATIONS = [
-  { id: '2026-11-17-attivita-3-anni', fn: 'garminActivitiesBackfill' }
+  { id: '2026-11-17-attivita-3-anni', fn: 'garminActivitiesBackfill' },
+  { id: '2026-11-18-storico-garmin', fn: 'eBackfillGarmin_' },   // per una nuova installazione: 90 notti
+  { id: '2026-11-18-storico-renpho', fn: 'eBackfillRenpho_' }    // e tutte le pesate (no-op se ci sono già)
 ];
+
+/** Storico Garmin solo se la scheda è quasi vuota (nuova installazione). */
+function eBackfillGarmin_() {
+  const sh = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID')).getSheetByName(GARMIN_TAB);
+  if (!sh || sh.getLastRow() < 30) garminBackfill();
+}
+
+/** Storico Renpho solo se ci sono le credenziali e la scheda è quasi vuota. */
+function eBackfillRenpho_() {
+  const p = PropertiesService.getScriptProperties();
+  if (!p.getProperty('RENPHO_EMAIL')) return;
+  const sh = SpreadsheetApp.openById(p.getProperty('SHEET_ID')).getSheetByName(RENPHO_TAB);
+  if (!sh || sh.getLastRow() < 5) renphoBackfill();
+}
 
 function ritmoEngineTick_() {
   const p = PropertiesService.getScriptProperties();

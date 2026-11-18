@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '18 nov 2026 · v5.5';
+  const RELEASE = '18 nov 2026 · v5.6';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -685,6 +685,8 @@
     const v = h('div', 'view' + (dir ? ' ' + dir : '')); main.appendChild(v);
     if (S.tab !== 'oggi' && S.tab !== 'insight') { const bk = h('button', 'back', '‹ Oggi'); bk.onclick = () => { buzz(); go('oggi'); }; v.appendChild(bk); }
     ({ oggi: viewOggi, sonno: viewSonno, sport: viewSport, corpo: viewCorpo, casa: viewCasa, insight: viewInsight })[S.tab](v);
+    if (S.tab === 'oggi' && (SETTINGS.hide || []).length) { const hd = h('p', 'foot', 'Nascosti: ' + SETTINGS.hide.map(k => `${FEATURES[k] || k} · <button class="more" data-show="${k}">mostra</button>`).join(' · '));
+      hd.querySelectorAll('[data-show]').forEach(b => { b.onclick = () => { buzz(); setHidden(b.dataset.show, false); }; }); v.appendChild(hd); }
     v.appendChild(h('p', 'foot', footText()));
     [...v.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, 10)));
     animate(v);
@@ -692,6 +694,8 @@
   const rerender = () => { const y = window.scrollY; main.innerHTML = ''; const v = h('div', 'view'); main.appendChild(v);
     if (S.tab !== 'oggi' && S.tab !== 'insight') { const bk = h('button', 'back', '‹ Oggi'); bk.onclick = () => { buzz(); go('oggi'); }; v.appendChild(bk); }
     ({ oggi: viewOggi, sonno: viewSonno, sport: viewSport, corpo: viewCorpo, casa: viewCasa, insight: viewInsight })[S.tab](v);
+    if (S.tab === 'oggi' && (SETTINGS.hide || []).length) { const hd = h('p', 'foot', 'Nascosti: ' + SETTINGS.hide.map(k => `${FEATURES[k] || k} · <button class="more" data-show="${k}">mostra</button>`).join(' · '));
+      hd.querySelectorAll('[data-show]').forEach(b => { b.onclick = () => { buzz(); setHidden(b.dataset.show, false); }; }); v.appendChild(hd); }
     v.appendChild(h('p', 'foot', footText()));
     [...v.children].forEach(c => { c.style.animation = 'none'; }); animate(v); window.scrollTo(0, y); };
   const ENG = DATA.engine || null;
@@ -708,13 +712,19 @@
     run.withSuccessHandler(r => { Object.keys(SETTINGS).forEach(k => delete SETTINGS[k]); Object.assign(SETTINGS, r || {}); toast('Salvato'); if (done) done(); rerender(); })
       .withFailureHandler(err => toast('Non salvato: ' + (err && err.message ? err.message : 'errore'))).ritmoSaveCheckin({ settings: st });
   };
+  // Parti dell'app che ognuno può nascondere (impostazione sul proprio account, APP_SETTINGS.hide).
+  const FEATURES = { recovery: 'Recupero dall\'operazione', tonight: 'Stasera' };
+  const featureOn = id => (SETTINGS.hide || []).indexOf(id) < 0;
+  const setHidden = (id, hide) => saveSettings({ hide: (SETTINGS.hide || []).filter(x => x !== id).concat(hide ? [id] : []) });
   const recoveryCard = () => {
     const c = h('section', 'card'); paint(c, 'corpo');
     const OP = SETTINGS.op_date;
     const ask = () => {
       c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Recupero dall'operazione</span></div>
         <p class="small muted">Inserisci la data dell'operazione: Ritmo confronta ogni misura di adesso con il tuo normale di prima.</p>
-        <div class="row-wrap"><input type="date" id="opd" max="${today}" value="${OP || ''}" class="dinput"><button class="btn" id="ops" style="padding:10px 16px;font-size:.9rem">Salva</button></div>`;
+        <div class="row-wrap"><input type="date" id="opd" max="${today}" value="${OP || ''}" class="dinput"><button class="btn" id="ops" style="padding:10px 16px;font-size:.9rem">Salva</button></div>
+        <button class="more" id="opNo">Non mi riguarda: nascondi</button>`;
+      $('#opNo', c).onclick = e => { e.stopPropagation(); buzz(); setHidden('recovery', true); };
       $('#ops', c).onclick = e => { e.stopPropagation(); const v = $('#opd', c).value; if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { toast('Scegli una data'); return; } saveSettings({ op_date: v }); };
     };
     if (!OP) { ask(); return c; }
@@ -790,9 +800,10 @@
     else if (rm && isNum(rm.temp) && rm.temp > 20.5) { t = 'Camera a ' + fmt(rm.temp, 1) + ' °C: abbassala di 2-3 gradi prima di dormire.'; why = 'Sotto i 20 °C di solito il sonno profondo aumenta.'; exp = 'temp'; }
     else if (rm && isNum(rm.co2) && rm.co2 > 800) { t = 'CO2 a ' + fmt(rm.co2) + ' ppm: socchiudi la finestra o la porta stanotte.'; why = 'Con la CO2 sotto 800 ppm l\'aria della notte resta fresca.'; exp = 'co2'; }
     else { t = 'Cerca di addormentarti entro le 23.'; why = 'Un orario regolare aiuta HRV e recupero.'; exp = 'bed'; }
-    c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Stasera</span>${st ? `<span class="muted small">esperimento</span>` : ''}</div><p style="font-weight:600">${esc(t)}</p><p class="small muted">${esc(why)}</p>
+    c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Stasera</span>${st ? `<span class="muted small">esperimento</span>` : '<button class="more" id="tHide">nascondi</button>'}</div><p style="font-weight:600">${esc(t)}</p><p class="small muted">${esc(why)}</p>
       ${st ? expMarks(st) : exp ? `<button class="more" id="tExp">Prova per 7 notti ›</button>` : ''}`;
     const b = $('#tExp', c); if (b) b.onclick = e => { e.stopPropagation(); buzz(); startExp(exp); };
+    const th = $('#tHide', c); if (th) th.onclick = e => { e.stopPropagation(); buzz(); setHidden('tonight', true); };
     return c;
   };
 
@@ -832,8 +843,8 @@
       { const dl = h('button', 'more', 'Diario: tutti i check-in ›'); dl.style.justifySelf = 'start'; dl.onclick = e => { e.stopPropagation(); buzz(); openDiary(); }; ci.appendChild(dl); }
     }
     v.appendChild(ci);
-    v.appendChild(recoveryCard());
-    v.appendChild(tonightCard());
+    if (featureOn('recovery')) v.appendChild(recoveryCard());
+    if (featureOn('tonight')) v.appendChild(tonightCard());
 
     // storie: note, scoperte, tendenze
     const an = analysis(); setBadge();

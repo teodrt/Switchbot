@@ -25,6 +25,7 @@ const DATA = <?!= json ?>;
    Per cambiare la grafica basta un commit su main: niente da incollare, niente deployment. */
 (function () {
   var REPO = 'teodrt/Switchbot', CDN = 'https://cdn.jsdelivr.net/gh/' + REPO + '@';
+  var BRANCH = <?!= JSON.stringify(typeof branch === 'undefined' ? 'main' : branch) ?>;   // "main" o il ramo della persona (proprietà RITMO_BRANCH)
   var started = false;
   function fail() {
     var b = document.getElementById('boot');
@@ -34,15 +35,15 @@ const DATA = <?!= json ?>;
     var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = CDN + ref + '/app/ritmo.css';
     document.head.appendChild(css);
     var js = document.createElement('script'); js.src = CDN + ref + '/app/ritmo.js';
-    js.onerror = function () { if (ref !== 'main') load('main'); else fail(); };
+    js.onerror = function () { if (ref !== BRANCH) load(BRANCH); else fail(); };
     document.head.appendChild(js);
   }
   function start(ref) { if (started) return; started = true; load(ref); }
-  setTimeout(function () { start('main'); }, 2500);
-  fetch('https://api.github.com/repos/' + REPO + '/commits/main', { headers: { Accept: 'application/vnd.github.sha' } })
+  setTimeout(function () { start(BRANCH); }, 2500);
+  fetch('https://api.github.com/repos/' + REPO + '/commits/' + BRANCH, { headers: { Accept: 'application/vnd.github.sha' } })
     .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
-    .then(function (sha) { sha = sha.trim(); start(/^[0-9a-f]{40}$/.test(sha) ? sha : 'main'); })
-    .catch(function () { start('main'); });
+    .then(function (sha) { sha = sha.trim(); start(/^[0-9a-f]{40}$/.test(sha) ? sha : BRANCH); })
+    .catch(function () { start(BRANCH); });
 })();
 </script>
 </body>

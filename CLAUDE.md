@@ -77,6 +77,28 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
   (artifact su claude.ai), link `/dev` dell'app e pull request. I link non vanno nel repo (ID):
   si prendono dalla conversazione, dalla lista degli artifact o dalla scheda `Motore`.
 
+## Più persone (stesso codice, dati separati)
+
+- Ogni persona ha il **suo** account Google, il suo foglio, il suo progetto Apps Script (Motore + ritmo) e le sue
+  chiavi nelle proprietà. Nessun dato passa da un'app all'altra. Mai nomi o dati della seconda persona nel repo.
+- **Due versioni**: proprietà `RITMO_BRANCH` (default `main`). Il proprietario usa `main`, la seconda persona il ramo
+  `p2` (senza nomi: il repo è pubblico). Ognuno può avere funzioni che l'altro non vuole: si sviluppano sul proprio ramo.
+  Le migliorie comuni passano da un ramo all'altro solo su richiesta (merge di `main` in `p2`, o cherry-pick al contrario),
+  dopo averle provate. Mai portare su `p2` una cosa che la seconda persona non ha chiesto, e viceversa.
+  Motore e caricatore leggono il ramo dalla proprietà (solo nelle versioni incollate dopo il 18/11/2026).
+- **Installazione da modello**: foglio "Ritmo - Modello" del proprietario, con lo script dentro (Motore + ritmo) e una
+  scheda `Configurazione` (righe `ramo` = `p2`, `aria` = id del foglio dell'aria). La seconda persona lo copia con il
+  link `/copy`, apre **Ritmo → Configura** (menu creato da `onOpen` in `motore.gs`), inserisce chiave Garmin e secondo
+  account Renpho: `ritmoSetupSave` salva `SHEET_ID` (il foglio stesso), legge la scheda Configurazione e lancia
+  `ritmoInstall`. Le migrazioni `eBackfillGarmin_` e `eBackfillRenpho_` importano lo storico solo se le schede sono vuote.
+  Resta a mano: chiave Garmin, account Renpho, autorizzazione Google, pubblicazione dell'app web.
+- Aria della camera condivisa (`air.gs`): chi ha il sensore (`SWITCHBOT_TOKEN`) scrive ogni ora solo data, temperatura,
+  umidità e CO2 degli ultimi 45 giorni nel foglio "Ritmo - Aria camera" (creato da solo, `AIR_SHEET_ID`) e lo condivide
+  in sola lettura. Chi non ha il sensore mette quell'id in `AIR_SOURCE_ID`: le letture nuove finiscono nella prima scheda
+  del suo foglio. `logReading` non fa niente senza `SWITCHBOT_TOKEN`.
+- Renpho: ogni persona ha il suo secondo account amico (una sessione per account; e così non vede le pesate dell'altro).
+- Parti nascondibili per persona: `APP_SETTINGS.hide` (`recovery`, `tonight`), con "mostra" in fondo a Oggi.
+
 ## Garmin Personal API
 
 - Chiave creata dall'utente su https://connect.garmin.com/app/settings/personalApiToken,
