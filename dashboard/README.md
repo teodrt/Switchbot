@@ -26,6 +26,10 @@ attività, settimana) in schede che salgono dal basso. Sezione e filtri restano 
    modificarlo o aggiungerlo), scoperte filtrabili (anche energia, umore, dolore), grafico a punti, andamento di
    energia e umore, tendenze, cosa sta ancora imparando, metodo.
 
+Spiegazioni: ogni elemento grafico che non è ovvio (righe della timeline, fasi del sonno, calendario,
+barre dello sport, settori e contagiri) ha un fumetto. Col mouse compare al passaggio; col dito il primo
+tocco mostra il fumetto e il secondo fa l'azione (es. apre la notte). "‹ Oggi" e il logo riportano a Oggi.
+
 ## Punteggio di recupero
 
 Media pesata di: sleep score (35 %), HRV rispetto alla mediana delle 30 notti precedenti (25 %),

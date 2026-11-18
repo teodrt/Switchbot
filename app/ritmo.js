@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '18 nov 2026 · v5.2';
+  const RELEASE = '18 nov 2026 · v5.3';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -431,7 +431,7 @@
       return `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${c[0].toFixed(1)}" y2="${c[1].toFixed(1)}" stroke="${i <= 20 ? 'var(--bad)' : 'rgba(255,255,255,.35)'}" stroke-width="${big ? 1.6 : .8}" opacity="${big ? .9 : .5}"/>`; }).join('');
     const nums = [0, 20, 40, 60, 80, 100].map(n => { const q = pt(n / 100, R - 31); return `<text x="${q[0].toFixed(1)}" y="${(q[1] + 3).toFixed(1)}" text-anchor="middle">${n}</text>`; }).join('');
     const ang = A0 + (v / 100) * SW + 90, tip = R - 24;
-    return `<svg class="tacho" viewBox="0 0 240 200" role="img" aria-label="Recupero ${isNum(score) ? score : 'non disponibile'} su 100">
+    return `<svg class="tacho"${tipAttr('<b>Recupero ' + (isNum(score) ? score : '-') + '/100</b><br>Media pesata dei 4 settori qui sotto: sonno 35 %, HRV 25 %, riposo 20 %, energia 20 %. 80+ pronto, 65-79 discreto, 50-64 con calma.')} viewBox="0 0 240 200" role="img" aria-label="Recupero ${isNum(score) ? score : 'non disponibile'} su 100">
       <defs><linearGradient id="tg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3d6bff"/><stop offset=".55" stop-color="#ffb27a"/><stop offset="1" stop-color="#ff6a2b"/></linearGradient></defs>
       <path d="${arcD(0, 1, R)}" stroke="rgba(255,255,255,.07)" stroke-width="9" fill="none" stroke-linecap="round"/>
       <path class="arc" d="${arcD(0, 1, R)}" stroke="url(#tg)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="${L.toFixed(1)}" stroke-dashoffset="${L.toFixed(1)}" data-to="${(L * (1 - v / 100)).toFixed(1)}" style="filter:drop-shadow(0 0 8px rgba(255,122,60,.55))"/>
@@ -445,7 +445,10 @@
   const secCol = p => p.odd ? 'var(--warn)' : p.v >= 90 ? 'var(--purple)' : p.v >= 70 ? 'var(--good)' : 'var(--warn)';
   const sectorsHTML = parts => '<div class="sectors">' + parts.slice(0, 4).map((p, i) => {
     const sub = p.odd ? 'insolito' : isNum(p.delta) ? (p.delta > 0 ? '+' : '') + fmt(p.delta * 100) + ' %' : 'punteggio';
-    return `<div class="sector" style="--sc:${secCol(p)}"><span class="sk">${p.k}</span><b><span data-count="${Math.round(p.raw)}">0</span><small>${p.unit}</small></b><span class="sd">${sub}</span></div>`; }).join('') + '</div>'
+        const why = p.k === 'Sonno' ? 'Sleep score di Garmin (0-100), pesa il 35 %.' : p.k === 'Energia' ? 'Body Battery al risveglio (0-100), pesa il 20 %.'
+      : p.k === 'HRV' ? `HRV notturna ${fmt(p.raw)} ms, ${p.delta > 0 ? '+' : ''}${fmt(p.delta * 100)} % sulla tua media. Più alta di solito è meglio${p.odd ? '; oltre +30 % è insolita e conta come neutra' : ''}. Pesa il 25 %.`
+      : `Battito a riposo ${fmt(p.raw)} bpm, ${p.delta > 0 ? '+' : ''}${fmt(p.delta * 100)} % sulla tua media. Più basso è meglio. Pesa il 20 %.`;
+    return `<div class="sector" style="--sc:${secCol(p)}"${tipAttr('<b>' + p.k + '</b> · punteggio ' + Math.round(p.v) + '<br>' + why)}><span class="sk">${p.k}</span><b><span data-count="${Math.round(p.raw)}">0</span><small>${p.unit}</small></b><span class="sd">${sub}</span></div>`; }).join('') + '</div>'
     + '<div class="seclegend"><span><i style="background:var(--purple)"></i>ottimo</span><span><i style="background:var(--good)"></i>buono</span><span><i style="background:var(--warn)"></i>sotto o insolito</span><span>% = scarto dalla tua media</span></div>';
   // Quadrante del sonno: orologio di 24 ore con l'arco della notte e l'orario medio.
   const dialHTML = (n, avgB, avgE) => {
@@ -485,7 +488,7 @@
   const scoreColor = s => !isNum(s) ? 'var(--surface-3)' : s >= 85 ? 'var(--good)' : s >= 75 ? 'color-mix(in srgb, var(--good) 60%, var(--warn))' : s >= 60 ? 'var(--warn)' : s >= 45 ? 'color-mix(in srgb, var(--warn) 50%, var(--bad))' : 'var(--bad)';
 
   // Timeline del sonno: una barra per notte dalle 21 alle 11, divisa nelle fasi.
-  const timeline = (list, sel, onPick) => {
+  const timeline = (list, sel, onPick, opts) => {
     const box = h('div', 'tl');
     const T0 = -180, T1 = 660;   // 21:00 - 11:00 in minuti da mezzanotte
     const x = m => ((m - T0) / (T1 - T0) * 100).toFixed(2) + '%';
@@ -498,12 +501,14 @@
         const st = [['deep', '--st-deep'], ['light', '--st-light'], ['rem', '--st-rem'], ['awake', '--st-awake']].filter(k => n[k[0]] > 0);
         bar = `<div class="tlbar" style="left:${x(clamp(b, T0, T1))};width:calc(${x(clamp(e, T0, T1))} - ${x(clamp(b, T0, T1))});--j:${j}">${st.map(k => `<i style="flex:${n[k[0]]};background:var(${k[1]})"></i>`).join('')}</div>`;
       }
+      row.dataset.tip = nightTip(n);
       row.innerHTML = `<span class="d"><b>${GG[dow(n.date)]}</b>${+n.date.slice(8, 10)}</span><div class="tltrack">${bar}</div><span class="sc" style="color:${scoreColor(n.score)}">${isNum(n.score) ? n.score : '-'}</span>`;
       row.onclick = () => { buzz(); onPick(n.date); };
       box.appendChild(row);
     });
     const ax = h('div', 'tlaxis', '<span></span><div><span>21</span><span>00</span><span>03</span><span>06</span><span>09</span><span>11</span></div><span></span>');
     const wrap = h('div', ''); wrap.style.display = 'grid'; wrap.style.gap = '8px'; wrap.appendChild(box); wrap.appendChild(ax);
+    if (!opts || !opts.noLegend) wrap.appendChild(h('div', 'legend', PH.map(k => `<span><i class="sw" style="background:var(${k[2]});height:8px"></i>${k[1].toLowerCase()}</span>`).join('') + '<span class="faint">ora del giorno · a destra lo sleep score</span>'));
     return wrap;
   };
 
@@ -529,6 +534,31 @@
     return close;
   };
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && closeSheet) closeSheet(); });
+  // Spiegazioni al passaggio del mouse o al tocco: ogni elemento con data-tip (HTML) mostra un fumetto.
+  // Mouse: compare al passaggio, il clic fa la sua azione. Dito: il primo tocco mostra il fumetto,
+  // il secondo tocco sullo stesso elemento fa l'azione (es. apre la notte).
+  const htip = h('div', 'htip'); htip.setAttribute('role', 'tooltip'); document.body.appendChild(htip);
+  let tipEl = null, ptype = 'mouse';
+  const showTip = el => { tipEl = el; htip.innerHTML = el.dataset.tip; htip.classList.add('on');
+    const r = el.getBoundingClientRect(), w = htip.offsetWidth, hh = htip.offsetHeight;
+    const left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+    const top = r.top - hh - 8 > 60 ? r.top - hh - 8 : r.bottom + 8;
+    htip.style.left = left + 'px'; htip.style.top = top + 'px'; };
+  const hideTip = () => { tipEl = null; htip.classList.remove('on'); };
+  document.addEventListener('pointerdown', e => { ptype = e.pointerType || 'mouse'; }, true);
+  document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest('[data-tip]'); if (el && el !== tipEl) showTip(el); else if (!el && tipEl) hideTip(); });
+  document.addEventListener('click', e => {
+    if (ptype === 'mouse') { hideTip(); return; }
+    const el = e.target.closest('[data-tip]');
+    if (el && el !== tipEl) { e.preventDefault(); e.stopPropagation(); showTip(el); return; }
+    hideTip();
+  }, true);
+  addEventListener('scroll', hideTip, { passive: true });
+  const tipAttr = html => ` data-tip="${esc(html)}"`;
+  const PH = [['deep', 'Profondo', '--st-deep'], ['light', 'Leggero', '--st-light'], ['rem', 'REM', '--st-rem'], ['awake', 'Sveglio', '--st-awake']];
+  const nightTip = n => `<b>${cap(GIORNI[dow(n.date)])} ${dLabel(n.date)}</b>${isNum(n.score) ? ' · sleep score <b>' + n.score + '</b>' : ''}<br>`
+    + (n.bed_start ? `${esc(n.bed_start)} → ${esc(n.bed_end || '-')} · ${hm(n.sleep_h)}<br>` : 'Dati Garmin non ancora arrivati<br>')
+    + PH.filter(k => isNum(n[k[0]])).map(k => `<span class="tk"><i style="background:var(${k[2]})"></i>${k[1]} ${fmt(n[k[0]])}′</span>`).join('');
   const toast = msg => { const t = h('div', 'toast', msg); layer.appendChild(t); raf2(() => t.classList.add('on')); setTimeout(() => { t.classList.remove('on'); setTimeout(() => t.remove(), 400); }, 2600); };
 
   // =========================================================================
@@ -595,6 +625,7 @@
   const tabsEl = $('#tabs'), pill = $('#pill'), main = $('#main');
   TABS.forEach(([id, label, col]) => { const b = h('button', 'tab', icon(id) + '<span>' + label + '</span>'); b.dataset.id = id; b.style.setProperty('--tc', `var(${col})`); b.onclick = () => { buzz(); go(id); }; tabsEl.appendChild(b); });
   $('#insightBtn').onclick = () => { buzz(); go('insight'); };
+  { const br = $('.brand'); br.style.cursor = 'pointer'; br.setAttribute('role', 'button'); br.setAttribute('aria-label', 'Torna a Oggi'); br.onclick = () => { buzz(); go('oggi'); }; }
   const hr = +((DATA.now || '').slice(11, 13) || 12);
   $('#hello').textContent = (hr < 5 ? 'Buonanotte' : hr < 13 ? 'Buongiorno' : hr < 18 ? 'Buon pomeriggio' : 'Buonasera') + ' · ' + GIORNI[dow(today)] + ' ' + dLabel(today);
   let lastIdx = 0;
@@ -619,12 +650,14 @@
   const render = dir => {
     main.innerHTML = '';
     const v = h('div', 'view' + (dir ? ' ' + dir : '')); main.appendChild(v);
+    if (S.tab !== 'oggi' && S.tab !== 'insight') { const bk = h('button', 'back', '‹ Oggi'); bk.onclick = () => { buzz(); go('oggi'); }; v.appendChild(bk); }
     ({ oggi: viewOggi, sonno: viewSonno, sport: viewSport, corpo: viewCorpo, casa: viewCasa, insight: viewInsight })[S.tab](v);
     v.appendChild(h('p', 'foot', footText()));
     [...v.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, 10)));
     animate(v);
   };
   const rerender = () => { const y = window.scrollY; main.innerHTML = ''; const v = h('div', 'view'); main.appendChild(v);
+    if (S.tab !== 'oggi' && S.tab !== 'insight') { const bk = h('button', 'back', '‹ Oggi'); bk.onclick = () => { buzz(); go('oggi'); }; v.appendChild(bk); }
     ({ oggi: viewOggi, sonno: viewSonno, sport: viewSport, corpo: viewCorpo, casa: viewCasa, insight: viewInsight })[S.tab](v);
     v.appendChild(h('p', 'foot', footText()));
     [...v.children].forEach(c => { c.style.animation = 'none'; }); animate(v); window.scrollTo(0, y); };
@@ -705,7 +738,7 @@
     const sp = h('section', 'card tap color'); paint(sp, 'sport');
     const MD = minByDay(), wk = [...Array(7)].map((_, i) => addDays(today, i - 6)), wkMin = wk.map(d => MD[d] || 0), mx = Math.max(30, Math.max.apply(null, wkMin));
     sp.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Sport</span><span class="more">›</span></div><div class="mid"><span data-count="${Math.round(sum(wkMin))}">0</span><small>min in 7 giorni</small></div>
-      <div class="bars" style="grid-template-columns:repeat(7,minmax(0,1fr))">${wk.map((d, i) => `<div class="bar ${wkMin[i] ? '' : 'dim'}"><div class="col" style="height:46px"><div class="fill" data-hgt="${Math.max(6, 100 * wkMin[i] / mx).toFixed(0)}%"></div></div><span class="k">${GG[dow(d)].slice(0, 1).toUpperCase()}</span></div>`).join('')}</div>`;
+      <div class="bars" style="grid-template-columns:repeat(7,minmax(0,1fr))">${wk.map((d, i) => `<div class="bar ${wkMin[i] ? '' : 'dim'}"${tipAttr(`<b>${cap(GIORNI[dow(d)])} ${dLabel(d)}</b><br>${wkMin[i] ? fmt(wkMin[i]) + ' minuti di attività' : 'nessuna attività'}`)}><div class="col" style="height:46px"><div class="fill" data-hgt="${Math.max(6, 100 * wkMin[i] / mx).toFixed(0)}%"></div></div><span class="k">${GG[dow(d)].slice(0, 1).toUpperCase()}</span></div>`).join('')}</div>`;
     sp.onclick = () => go('sport'); g.appendChild(sp);
     v.appendChild(g);
     if (body.length) {
@@ -764,7 +797,6 @@
     if (!S.night || !byDate[S.night]) S.night = list[list.length - 1].date;
     const idx = list.findIndex(n => n.date === S.night), n = list[idx];
     const card = h('section', 'hero night');
-    card.appendChild(h('span', 'moon'));
     const nav = h('div', 'nightnav');
     const prev = h('button', 'arr', '‹'), next = h('button', 'arr', '›');
     prev.setAttribute('aria-label', 'Notte precedente'); next.setAttribute('aria-label', 'Notte successiva');
@@ -782,7 +814,7 @@
       card.appendChild(hr2);
       const st = [['deep', 'Profondo', '--st-deep'], ['light', 'Leggero', '--st-light'], ['rem', 'REM', '--st-rem'], ['awake', 'Sveglio', '--st-awake']];
       const stw = h('div', ''); stw.style.cssText = 'display:grid;gap:10px;margin-top:16px';
-      stw.appendChild(h('div', 'stages', st.filter(k => n[k[0]] > 0).map(k => `<i data-flex="${n[k[0]]}" style="background:var(${k[2]})"></i>`).join('')));
+      stw.appendChild(h('div', 'stages', st.filter(k => n[k[0]] > 0).map(k => `<i data-flex="${n[k[0]]}" style="background:var(${k[2]})"${tipAttr(`<b>${k[1]}</b> ${fmt(n[k[0]])} minuti · ${fmt(100 * n[k[0]] / ((n.deep || 0) + (n.light || 0) + (n.rem || 0) + (n.awake || 0)))} % della notte`)}></i>`).join('')));
       stw.appendChild(h('div', 'slist', st.map(k => { const b = baseline(n.date, k[0]); const d = isNum(n[k[0]]) && b !== null ? n[k[0]] - b : null;
         return `<div><span class="muted"><i class="dot" style="background:var(${k[2]})"></i> ${k[1]}</span><b>${fmt(n[k[0]])}′</b><span class="${d === null ? 'faint' : (k[0] === 'awake' ? d <= 0 : d >= 0) ? 'good' : 'warn'}">${d === null ? '' : (d > 0 ? '+' : '') + fmt(d) + '′'}</span></div>`; }).join('')));
       card.appendChild(stw);
@@ -857,6 +889,7 @@
       if (d > end) { b.style.visibility = 'hidden'; cal.appendChild(b); continue; }
       b.style.background = scoreColor(x && x.score); b.style.setProperty('--j', j++);
       b.setAttribute('aria-label', dLabel(ds) + (x && isNum(x.score) ? ', score ' + x.score : ', nessun dato'));
+      b.dataset.tip = x ? nightTip(x) : `<b>${cap(GIORNI[dow(ds)])} ${dLabel(ds)}</b><br>nessun dato del sonno`;
       if (ds === n.date) b.classList.add('sel');
       if (x && (isNum(x.score) || x.air)) b.onclick = () => { buzz(); S.night = ds; rerender(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
       cal.appendChild(b);
@@ -891,7 +924,7 @@
     const c = h('section', 'card');
     c.appendChild(h('div', 'chead', `<span class="eyebrow"><i></i>Minuti a settimana</span><span class="muted small">ultime ${S.spWeeks} settimane</span>`));
     const mx = Math.max(60, Math.max.apply(null, weeks.map(w => w.min)));
-    c.appendChild(h('div', 'bars', weeks.map((w, i) => `<div class="bar ${i === weeks.length - 1 ? '' : 'dim'}" title="${dLabel(w.s)}"><span class="v">${w.min ? fmt(w.min) : ''}</span><div class="col"><div class="fill" data-hgt="${Math.max(3, 100 * w.min / mx).toFixed(0)}%"></div></div><span class="k">${+w.s.slice(8, 10)}/${+w.s.slice(5, 7)}</span></div>`).join('')));
+    c.appendChild(h('div', 'bars', weeks.map((w, i) => `<div class="bar ${i === weeks.length - 1 ? '' : 'dim'}"${tipAttr(`<b>Settimana dal ${dLabel(w.s)}</b><br>${w.n ? fmt(w.min) + ' minuti · ' + w.n + (w.n === 1 ? ' attività' : ' attività') + (w.load ? ' · carico ' + fmt(w.load) : '') : 'nessuna attività'}`)}><span class="v">${w.min ? fmt(w.min) : ''}</span><div class="col"><div class="fill" data-hgt="${Math.max(3, 100 * w.min / mx).toFixed(0)}%"></div></div><span class="k">${+w.s.slice(8, 10)}/${+w.s.slice(5, 7)}</span></div>`).join('')));
     c.lastChild.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(0, 1fr))`;
     v.appendChild(c);
     // VO2max
