@@ -82,10 +82,8 @@ function ritmoSaveCheckin(c) {
     const sh = ss.getSheetByName(N_MOOD_TAB) || ss.insertSheet(N_MOOD_TAB);
     sh.getRange('A:B').setNumberFormat('@');
     if (sh.getLastRow() === 0) sh.appendRow(N_MOOD_HEADER);
-    const n = sh.getLastRow() - 1;
-    const dates = n > 0 ? sh.getRange(2, 1, n, 1).getDisplayValues().map(r => r[0]) : [];
-    const i = dates.indexOf(date);
-    if (i >= 0) sh.getRange(i + 2, 1, 1, row.length).setValues([row]); else sh.appendRow(row);
+    const i = eKeys_(sh).indexOf(date);
+    if (i >= 0) sh.getRange(i + 2, 1, 1, row.length).setValues([row]); else eAppend_(sh, [row], 2);
   } finally { lock.releaseLock(); }
   return { date: row[0], time: row[1], energy: row[2] === '' ? null : row[2], mood: row[3] === '' ? null : row[3],
     pain: row[4] === '' ? null : row[4], note: row[5] };

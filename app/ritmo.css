@@ -194,7 +194,9 @@ nav.tabs { position: fixed; z-index: 40; left: 50%; transform: translateX(-50%);
 .sectors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .sector { background: rgba(0,0,0,.28); border: 1px solid var(--line); border-radius: 12px; padding: 8px 9px 7px; display: grid; gap: 1px; min-width: 0; position: relative; overflow: hidden; }
 .sector::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--sc); box-shadow: 0 0 12px var(--sc); }
-.sector .sk { font-family: var(--f-data); font-size: .58rem; color: var(--faint); letter-spacing: .08em; }
+.sector .sk { font-family: var(--f-data); font-size: .56rem; color: var(--faint); letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sector b small { font-family: var(--f-data); font-style: normal; font-size: .6rem; font-weight: 500; color: var(--muted); margin-left: 2px; }
+.sector .sd { font-family: var(--f-data); font-size: .62rem; color: var(--muted); white-space: nowrap; }
 .sector .sn { font-size: .7rem; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sector b { font-family: var(--f-display); font-style: italic; font-weight: 700; font-size: 1.35rem; line-height: 1.1; color: var(--sc); }
 .seclegend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .68rem; color: var(--faint); }
