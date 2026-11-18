@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '18 nov 2026 · v5.1';
+  const RELEASE = '18 nov 2026 · v5.2';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -535,11 +535,20 @@
   // Check-in
   // =========================================================================
   const ENERGY = ['Scarico', 'Basso', 'Normale', 'Buono', 'Carico'], MOODL = ['Giù', 'Così così', 'Normale', 'Bene', 'Ottimo'];
+  // Diario: una riga per check-in con i tre valori e la nota; tocca per modificare.
+  const moodLevel = (v, hi) => !isNum(v) ? '' : hi ? (v >= 4 ? 'good' : v >= 3 ? 'warn' : 'bad') : (v <= 2 ? 'good' : v <= 5 ? 'warn' : 'bad');
+  const diaryRow = (d, m) => m
+    ? `<button class="drow" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span>
+        <span class="dv"><span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span><span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span><span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span></span>
+        ${m.note ? `<span class="dn">“${esc(m.note)}”</span>` : ''}</button>`
+    : `<button class="drow miss" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span><span class="dv faint">nessun check-in · <span class="more">aggiungi +</span></span></button>`;
+  const bindDiary = el => el.querySelectorAll('.drow').forEach(b => { b.onclick = e => { e.stopPropagation(); buzz(); openCheckin(null, b.dataset.day); }; });
   const todayMood = () => MOOD.find(m => m.date === today) || null;
-  const openCheckin = pre => sheet((box, close) => {
-    const cur = Object.assign({ energy: null, mood: null, pain: 0, note: '' }, todayMood() || {}, pre || {});
+  const openCheckin = (pre, day) => sheet((box, close) => {
+    day = day || today; const isToday = day === today;
+    const cur = Object.assign({ energy: null, mood: null, pain: 0, note: '' }, MOOD.find(m => m.date === day) || {}, pre || {});
     paint(box, 'insight');
-    box.innerHTML = `<div><span class="eyebrow"><i></i>Check-in · ${GIORNI[dow(today)]} ${dLabel(today)}</span><h2 style="margin-top:6px">Come ti senti oggi?</h2>
+    box.innerHTML = `<div><span class="eyebrow"><i></i>Check-in · ${GIORNI[dow(day)]} ${dLabel(day)}</span><h2 style="margin-top:6px">${isToday ? 'Come ti senti oggi?' : 'Com\'era ' + GIORNI[dow(day)] + ' ' + dLabel(day) + '?'}</h2>
       <p class="muted small" style="margin-top:4px">Pochi secondi. Ritmo collega le risposte a sonno, recupero e allenamenti.</p></div>`;
     const scale = (key, labels, title) => {
       const wrap = h('div', '', `<span class="eyebrow" style="margin-bottom:8px">${title}</span>`); wrap.style.display = 'grid'; wrap.style.gap = '8px';
@@ -560,7 +569,7 @@
     save.querySelector('svg').style.cssText = 'width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.6';
     save.onclick = () => {
       if (!cur.energy || !cur.mood) { toast('Scegli energia e umore'); return; }
-      const payload = { date: today, energy: cur.energy, mood: cur.mood, pain: cur.pain, note: ta.value.trim() };
+      const payload = { date: day, energy: cur.energy, mood: cur.mood, pain: cur.pain, note: ta.value.trim() };
       const run = window.google && google.script && google.script.run;
       if (!run) { toast('Anteprima: il salvataggio funziona solo nell\'app Ritmo'); return; }
       save.disabled = true; save.textContent = 'Salvo...';
@@ -786,6 +795,11 @@
     v.appendChild(card);
     const notes = nightNotes(n);
     if (notes.length) v.appendChild(h('section', 'card', notes.map(noteHTML).join('')));
+    if (n.date <= today) {
+      const c = h('section', 'card'); paint(c, 'insight');
+      c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Il mattino dopo</span><span class="muted xs">check-in</span></div><div class="diary">${diaryRow(n.date, moodBy()[n.date])}</div>`;
+      bindDiary(c); v.appendChild(c);
+    }
     if (isNum(n.score) && n.bed_start && n.bed_end) {
       const prev = nights.filter(x => x.date < n.date && bedMin(x.bed_start) !== null && bedMin(x.bed_end) !== null).slice(-14);
       const dial = dialHTML(n, prev.length >= 5 ? median(prev.map(x => bedMin(x.bed_start))) : null, prev.length >= 5 ? median(prev.map(x => bedMin(x.bed_end))) : null);
@@ -992,6 +1006,18 @@
     v.appendChild(back);
     v.appendChild(h('div', 'vhead', `<div><span class="k">Insight</span><h1>Cosa dicono i tuoi dati</h1></div><span class="muted small">${gNights.length} notti · ${an.tested} confronti</span>`));
     const F = [['all', 'Tutto'], ['score', 'Sleep score'], ['hrv', 'HRV'], ['rhr', 'Battito'], ['bb', 'Body Battery'], ['deep', 'Profondo'], ['energy', 'Energia'], ['moodv', 'Umore'], ['pain', 'Dolore']];
+    {
+      const MB = moodBy(), last7 = [...Array(7)].map((_, i) => addDays(today, -i));
+      const older = MOOD.map(m => m.date).filter(d => d < last7[6]).sort().reverse();
+      const all = last7.concat(older), shown = S.diaryAll ? all : last7;
+      const c = h('section', 'card'); paint(c, 'insight');
+      c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Diario</span><span class="muted small">${MOOD.length} check-in</span></div>
+        <div class="diary">${shown.map(d => diaryRow(d, MB[d])).join('')}</div>
+        ${older.length ? `<button class="more" id="dAll">${S.diaryAll ? 'Mostra meno' : 'Mostra tutto (' + all.length + ' giorni)'}</button>` : ''}
+        <p class="hint">Tocca un giorno per modificarlo o aggiungere un check-in dimenticato.</p>`;
+      bindDiary(c); const da = $('#dAll', c); if (da) da.onclick = () => { S.diaryAll = !S.diaryAll; rerender(); };
+      v.appendChild(c);
+    }
     v.appendChild(chips(F, S.aFilter, k => { S.aFilter = k; save(); rerender(); }));
     const list = an.findings.filter(t => S.aFilter === 'all' || t.o.id === S.aFilter);
     if (list.length) list.forEach((t, i) => {

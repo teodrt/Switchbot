@@ -16,13 +16,14 @@ attività, settimana) in schede che salgono dal basso. Sezione e filtri restano 
    "Per te oggi" (note della notte, tendenze, scoperte), timeline delle ultime 7 notti, casa (CO2 su
    semicerchio), sport degli ultimi 7 giorni, corpo con peso a 6 mesi, "La tua settimana", recupero a 30 giorni.
 2. **Sonno**: navigazione tra le notti (frecce e swipe), anello, fasi rispetto al solito, HRV, riposo,
-   recupero, note, aria della camera, timeline di 14 notti, andamento (8 metriche, 4 periodi), calendario.
+   recupero, note, check-in del mattino dopo, aria della camera, timeline di 14 notti, andamento (8 metriche, 4 periodi), calendario.
 3. **Sport**: carico degli ultimi 7 giorni rispetto alla media delle ultime 4 settimane (rapporto
    < 0,8 in calo, 0,8-1,3 equilibrato, 1,3-1,5 in salita, > 1,5 molto alto), minuti a settimana,
    VO2 max, attività recenti con dettaglio e notte successiva.
 4. **Corpo**: 6 metriche con periodo, composizione dell'ultima pesata, tendenza, ultime pesate.
 5. **Casa**: CO2 attuale su semicerchio, temperatura, umidità, seconda stanza, storico, CO2 per notte.
-6. **Insight**: scoperte filtrabili (anche energia, umore, dolore), grafico a punti, andamento di
+6. **Insight**: diario dei check-in (ultimi 7 giorni, anche quelli mancanti, "Mostra tutto"; tocca un giorno per
+   modificarlo o aggiungerlo), scoperte filtrabili (anche energia, umore, dolore), grafico a punti, andamento di
    energia e umore, tendenze, cosa sta ancora imparando, metodo.
 
 ## Punteggio di recupero
