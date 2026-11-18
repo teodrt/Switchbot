@@ -12,7 +12,7 @@ check-in, Insight dal pulsante in alto a destra. Ogni sezione ha un suo colore. 
 linee si scorrono col dito; toccare un punto che è una notte apre quella notte. Dettagli (check-in,
 attività, settimana) in schede che salgono dal basso. Sezione e filtri restano in `localStorage`.
 
-1. **Oggi**: anello del recupero con 4 indicatori (sonno, HRV, riposo, energia), check-in, carosello
+1. **Oggi**: contagiri del recupero e 4 settori (sonno, HRV, riposo, energia) con il valore vero e lo scarto dalla media, check-in, carosello
    "Per te oggi" (note della notte, tendenze, scoperte), timeline delle ultime 7 notti, casa (CO2 su
    semicerchio), sport degli ultimi 7 giorni, corpo con peso a 6 mesi, "La tua settimana", recupero a 30 giorni.
 2. **Sonno**: navigazione tra le notti (frecce e swipe), anello, fasi rispetto al solito, HRV, riposo,
@@ -27,10 +27,14 @@ attività, settimana) in schede che salgono dal basso. Sezione e filtri restano 
 
 ## Punteggio di recupero
 
-Media pesata di: sleep score (35 %), HRV rispetto alla mediana delle 30 notti precedenti
-(25 %, `70 + 150 × (rapporto - 1)`), battito a riposo rispetto alla mediana (20 %,
-`70 - 300 × (rapporto - 1)`), Body Battery al risveglio (20 %). Ogni componente è limitata a 0-100;
-se una manca, i pesi si ridistribuiscono. 80+ pronto, 65-79 discreto, 50-64 con calma, sotto 50 recupero.
+Media pesata di: sleep score (35 %), HRV rispetto alla mediana delle 30 notti precedenti (25 %),
+battito a riposo rispetto alla mediana (20 %), Body Battery al risveglio (20 %).
+HRV e battito usano una scala morbida sullo scarto d dalla mediana: 70 = come al solito,
+sopra `70 + 25 × tanh(d / s)` (al massimo 95, s = 0,15 per HRV e 0,06 per il battito),
+sotto `70 + 70 × tanh(d / s)` (s = 0,25 e 0,08); per il battito d è col segno invertito.
+HRV oltre il 30 % sopra la mediana è "insolita" e conta 70 (neutra), settore giallo.
+I settori mostrano il valore vero (ms, bpm) e lo scarto in %. Colori: viola ≥ 90, verde ≥ 70, giallo sotto.
+Se una componente manca, i pesi si ridistribuiscono. 80+ pronto, 65-79 discreto, 50-64 con calma, sotto 50 recupero.
 
 ## Note della notte
 

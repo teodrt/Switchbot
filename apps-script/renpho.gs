@@ -273,13 +273,13 @@ function renphoWrite_(rows) {
   const sh = ss.getSheetByName(RENPHO_TAB) || ss.insertSheet(RENPHO_TAB);
   sh.getRange('A:A').setNumberFormat('@');
   if (sh.getLastRow() === 0) sh.appendRow(RENPHO_HEADER);
-  const n = sh.getLastRow() - 1;
-  const dates = n > 0 ? sh.getRange(2, 1, n, 1).getDisplayValues().map(r => r[0]) : [];
+  const dates = eKeys_(sh), append = [];
   rows.forEach(r => {
     const i = dates.indexOf(r[0]);
     if (i >= 0) sh.getRange(i + 2, 1, 1, r.length).setValues([r]);
-    else { sh.appendRow(r); dates.push(r[0]); }
+    else { append.push(r); dates.push(r[0]); }
   });
+  eAppend_(sh, append, 1);
   if (sh.getLastRow() > 2) sh.getRange(2, 1, sh.getLastRow() - 1, RENPHO_HEADER.length).sort(1);
 }
 

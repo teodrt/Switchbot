@@ -106,6 +106,25 @@ function eEnsureTriggers_() {
   if (!ticks.length) ScriptApp.newTrigger('ritmoTick').timeBased().everyMinutes(10).create();
 }
 
+/**
+ * Chiavi della colonna A (date o id) come testo 'yyyy-MM-dd'. Una cella che il foglio ha trasformato
+ * in data viene riconosciuta lo stesso, così non si creano righe doppie.
+ */
+function eKeys_(sh) {
+  const n = sh.getLastRow() - 1;
+  if (n <= 0) return [];
+  return sh.getRange(2, 1, n, 1).getValues().map(r => r[0] instanceof Date ? Utilities.formatDate(r[0], E_TZ, 'yyyy-MM-dd') : String(r[0]));
+}
+
+/** Aggiunge righe in fondo con le prime textCols colonne in formato testo (prima di scrivere, non dopo). */
+function eAppend_(sh, rows, textCols) {
+  if (!rows.length) return;
+  const r0 = sh.getLastRow() + 1, need = r0 + rows.length - 1 - sh.getMaxRows();
+  if (need > 0) sh.insertRowsAfter(sh.getMaxRows(), need);
+  sh.getRange(r0, 1, rows.length, textCols).setNumberFormat('@');
+  sh.getRange(r0, 1, rows.length, rows[0].length).setValues(rows);
+}
+
 /** Registro breve del motore (ultime 30 righe), mostrato nell'app. */
 function eLog_(msg) {
   const p = PropertiesService.getScriptProperties();

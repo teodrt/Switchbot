@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '18 nov 2026 · v5';
+  const RELEASE = '18 nov 2026 · v5.1';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -121,13 +121,21 @@
   });
   const baseline = (date, k, days) => { const prev = nights.filter(n => n.date < date && isNum(n[k])).slice(-(days || 30)); return prev.length >= 7 ? median(prev.map(n => n[k])) : null; };
 
+  // Recupero: ogni parte è un punteggio 0-100 rispetto alla tua media (mediana delle notti precedenti).
+  // Scala morbida: 70 = come al solito, al massimo 95 anche con scarti grandi, così non si satura.
+  // HRV oltre il 30 % sopra la media è "insolita" (misura disturbata o fase particolare): conta come neutra.
+  const soft = (d, up, down) => d >= 0 ? 70 + 25 * Math.tanh(d / up) : 70 + 70 * Math.tanh(d / down);
   const readiness = n => {
     if (!n || !isNum(n.score)) return null;
     const parts = [];
-    parts.push({ k: 'Sonno', v: clamp(n.score, 0, 100), w: .35 });
-    const bh = baseline(n.date, 'hrv'); if (isNum(n.hrv) && bh) parts.push({ k: 'HRV', v: clamp(70 + 150 * (n.hrv / bh - 1), 0, 100), w: .25 });
-    const br = baseline(n.date, 'rhr'); if (isNum(n.rhr) && br) parts.push({ k: 'Riposo', v: clamp(70 - 300 * (n.rhr / br - 1), 0, 100), w: .2 });
-    if (isNum(n.bb_wake)) parts.push({ k: 'Energia', v: clamp(n.bb_wake, 0, 100), w: .2 });
+    parts.push({ k: 'Sonno', v: clamp(n.score, 0, 100), w: .35, raw: n.score, unit: '/100' });
+    const bh = baseline(n.date, 'hrv');
+    if (isNum(n.hrv) && bh) { const d = n.hrv / bh - 1, odd = d > .3;
+      parts.push({ k: 'HRV', v: odd ? 70 : clamp(soft(d, .15, .25), 0, 100), w: .25, raw: n.hrv, unit: 'ms', delta: d, odd: odd }); }
+    const br = baseline(n.date, 'rhr');
+    if (isNum(n.rhr) && br) { const d = n.rhr / br - 1;
+      parts.push({ k: 'Riposo', v: clamp(soft(-d, .06, .08), 0, 100), w: .2, raw: n.rhr, unit: 'bpm', delta: d }); }
+    if (isNum(n.bb_wake)) parts.push({ k: 'Energia', v: clamp(n.bb_wake, 0, 100), w: .2, raw: n.bb_wake, unit: 'BB' });
     const tw = parts.reduce((s, p) => s + p.w, 0);
     return { score: Math.round(parts.reduce((s, p) => s + p.v * p.w, 0) / tw), parts: parts };
   };
@@ -434,9 +442,11 @@
       <text class="tl" x="${cx}" y="${cy + 62}" text-anchor="middle">RECUPERO / 100</text></svg>`;
   };
   // Settori come nei tempi di F1: viola = ottimo, verde = buono, giallo = sotto.
-  const secCol = v => v >= 90 ? 'var(--purple)' : v >= 70 ? 'var(--good)' : 'var(--warn)';
-  const sectorsHTML = parts => '<div class="sectors">' + parts.slice(0, 4).map((p, i) => `<div class="sector" style="--sc:${secCol(p.v)}"><span class="sk">S${i + 1}</span><span class="sn">${p.k}</span><b data-count="${Math.round(p.v)}">0</b></div>`).join('') + '</div>'
-    + '<div class="seclegend"><span><i style="background:var(--purple)"></i>ottimo</span><span><i style="background:var(--good)"></i>buono</span><span><i style="background:var(--warn)"></i>sotto la media</span></div>';
+  const secCol = p => p.odd ? 'var(--warn)' : p.v >= 90 ? 'var(--purple)' : p.v >= 70 ? 'var(--good)' : 'var(--warn)';
+  const sectorsHTML = parts => '<div class="sectors">' + parts.slice(0, 4).map((p, i) => {
+    const sub = p.odd ? 'insolito' : isNum(p.delta) ? (p.delta > 0 ? '+' : '') + fmt(p.delta * 100) + ' %' : 'punteggio';
+    return `<div class="sector" style="--sc:${secCol(p)}"><span class="sk">${p.k}</span><b><span data-count="${Math.round(p.raw)}">0</span><small>${p.unit}</small></b><span class="sd">${sub}</span></div>`; }).join('') + '</div>'
+    + '<div class="seclegend"><span><i style="background:var(--purple)"></i>ottimo</span><span><i style="background:var(--good)"></i>buono</span><span><i style="background:var(--warn)"></i>sotto o insolito</span><span>% = scarto dalla tua media</span></div>';
   // Quadrante del sonno: orologio di 24 ore con l'arco della notte e l'orario medio.
   const dialHTML = (n, avgB, avgE) => {
     const b = bedMin(n.bed_start), e = bedMin(n.bed_end); if (b === null || e === null) return '';

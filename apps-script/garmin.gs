@@ -140,13 +140,13 @@ function garminWrite_(rows) {
   const sh = ss.getSheetByName(GARMIN_TAB) || ss.insertSheet(GARMIN_TAB);
   sh.getRange('A:A').setNumberFormat('@'); // date come testo, così non diventano date locali
   if (sh.getLastRow() === 0) sh.appendRow(GARMIN_HEADER);
-  const n = sh.getLastRow() - 1;
-  const dates = n > 0 ? sh.getRange(2, 1, n, 1).getDisplayValues().map(r => r[0]) : [];
+  const dates = eKeys_(sh), append = [];
   rows.forEach(r => {
     const i = dates.indexOf(r[0]);
     if (i >= 0) sh.getRange(i + 2, 1, 1, r.length).setValues([r]);
-    else { sh.appendRow(r); dates.push(r[0]); }
+    else { append.push(r); dates.push(r[0]); }
   });
+  eAppend_(sh, append, 1);
   if (sh.getLastRow() > 2) sh.getRange(2, 1, sh.getLastRow() - 1, GARMIN_HEADER.length).sort(1);
 }
 
@@ -231,15 +231,14 @@ function gActWrite_(rows) {
   const sh = ss.getSheetByName(GARMIN_ACT_TAB) || ss.insertSheet(GARMIN_ACT_TAB);
   sh.getRange('A:C').setNumberFormat('@');
   if (sh.getLastRow() === 0) sh.appendRow(GARMIN_ACT_HEADER);
-  const n = sh.getLastRow() - 1;
-  const ids = n > 0 ? sh.getRange(2, 1, n, 1).getDisplayValues().map(r => r[0]) : [];
+  const ids = eKeys_(sh);
   const append = [];
   rows.forEach(r => {
     const i = ids.indexOf(r[0]);
     if (i >= 0) sh.getRange(i + 2, 1, 1, r.length).setValues([r]);
     else { append.push(r); ids.push(r[0]); }
   });
-  if (append.length) sh.getRange(sh.getLastRow() + 1, 1, append.length, append[0].length).setValues(append);
+  eAppend_(sh, append, 3);
   if (sh.getLastRow() > 2) sh.getRange(2, 1, sh.getLastRow() - 1, GARMIN_ACT_HEADER.length).sort([{ column: 2 }, { column: 3 }]);
 }
 

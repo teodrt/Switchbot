@@ -67,6 +67,9 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
 - Prima del merge: provare con i dati reali (Node + Playwright) e aggiornare l'anteprima privata.
 - L'utente apre l'app dal link di test della web app (finisce con `/dev`, solo per il proprietario).
 - `DATA` arriva solo da Apps Script: nessun dato personale in `app/`.
+- **A ogni modifica, in fondo al messaggio all'utente, stampare sempre i link**: anteprima privata
+  (artifact su claude.ai), link `/dev` dell'app e pull request. I link non vanno nel repo (ID):
+  si prendono dalla conversazione, dalla lista degli artifact o dalla scheda `Motore`.
 
 ## Garmin Personal API
 
