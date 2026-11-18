@@ -77,6 +77,20 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
   (artifact su claude.ai), link `/dev` dell'app e pull request. I link non vanno nel repo (ID):
   si prendono dalla conversazione, dalla lista degli artifact o dalla scheda `Motore`.
 
+## Più persone (stesso codice, dati separati)
+
+- Ogni persona ha il **suo** account Google, il suo foglio, il suo progetto Apps Script (Motore + ritmo) e le sue
+  chiavi nelle proprietà. Nessun dato passa da un'app all'altra. Mai nomi o dati della seconda persona nel repo.
+- Canali: proprietà `RITMO_BRANCH` (default `main`). Il proprietario del repo resta su `main` e fa da tester; la
+  seconda persona usa `stabile`, che si porta avanti a mano quando una versione ha girato qualche giorno senza problemi.
+  Motore e caricatore leggono il ramo dalla proprietà (solo nelle versioni incollate dopo il 18/11/2026).
+- Aria della camera condivisa (`air.gs`): chi ha il sensore (`SWITCHBOT_TOKEN`) scrive ogni ora solo data, temperatura,
+  umidità e CO2 degli ultimi 45 giorni nel foglio "Ritmo - Aria camera" (creato da solo, `AIR_SHEET_ID`) e lo condivide
+  in sola lettura. Chi non ha il sensore mette quell'id in `AIR_SOURCE_ID`: le letture nuove finiscono nella prima scheda
+  del suo foglio. `logReading` non fa niente senza `SWITCHBOT_TOKEN`.
+- Renpho: ogni persona ha il suo secondo account amico (una sessione per account; e così non vede le pesate dell'altro).
+- Parti nascondibili per persona: `APP_SETTINGS.hide` (`recovery`, `tonight`), con "mostra" in fondo a Oggi.
+
 ## Garmin Personal API
 
 - Chiave creata dall'utente su https://connect.garmin.com/app/settings/personalApiToken,

@@ -88,6 +88,13 @@ test('nActivities_: battito massimo oltre 200 scartato', () => {
   assert.strictEqual(a[0][7], null);
 });
 
+test('aria condivisa: solo letture valide e solo dati dell\'aria', () => {
+  const log = [['timestamp', 'temp_c', 'rh_pct', 'co2_ppm', 'battery', 'hub_temp_c', 'hub_rh_pct', 'hub_light', 'note'],
+    ['2026-01-01 00:00', 20, 50, 600, 100, 21, 50, 1, ''], ['2026-01-01 00:10', 0, 0, 415, 0, '', '', '', ''], ['2026-01-02 00:00', '20,5', 51, 610, 100, '', '', '', '']];
+  assert.deepStrictEqual(aRows_(log, '2026-01-01 00:05'), [['2026-01-02 00:00', 20.5, 51, 610]]);
+  assert.deepStrictEqual(aRows_(log, '').map(r => r.length), [4, 4]);
+});
+
 test('lavori del pianificatore: funzioni esistenti', () => {
   E_JOBS.concat(E_MIGRATIONS).forEach(j => { assert.strictEqual(typeof global[j.fn], 'function', j.fn); if (j.until) assert.strictEqual(typeof global[j.until], 'function', j.until); });
 });

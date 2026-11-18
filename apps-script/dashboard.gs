@@ -15,6 +15,7 @@ const N_RAW_DAYS = 7;
 function doGet() {
   const t = HtmlService.createTemplateFromFile('ritmo');
   t.json = JSON.stringify(nData_()).replace(/</g, '\\u003c');
+  t.branch = PropertiesService.getScriptProperties().getProperty('RITMO_BRANCH') || 'main';
   return t.evaluate()
     .setTitle('Ritmo')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
@@ -38,7 +39,8 @@ function nData_() {
 const N_MOOD_TAB = 'Umore';
 const N_MOOD_HEADER = ['date', 'time', 'energy', 'mood', 'pain', 'note', 'tags'];
 const N_TAGS = ['fisio', 'antidolorifico', 'alcol', 'caffe', 'cena', 'finestra'];   // caselle del check-in (ieri e stanotte)
-const N_EXPS = ['temp', 'co2', 'bed', 'caffe'];   // esperimenti di 7 notti che l'app sa misurare
+const N_EXPS = ['temp', 'co2', 'bed', 'caffe'];
+const N_FEATURES = ['recovery', 'tonight'];   // parti dell'app che si possono nascondere   // esperimenti di 7 notti che l'app sa misurare
 
 /** Impostazioni dell'utente salvate dall'app (es. data dell'operazione): proprietà APP_SETTINGS, mai nel repo. */
 function nSettings_() {
@@ -88,6 +90,7 @@ function ritmoSaveCheckin(c) {
   if (c && c.settings) {
     const st = nSettings_(), s = c.settings, isDay = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
     if ('op_date' in s) { if (isDay(s.op_date)) st.op_date = s.op_date; else delete st.op_date; }
+    if ('hide' in s) st.hide = (s.hide || []).filter(x => N_FEATURES.indexOf(x) >= 0);   // riquadri che la persona non vuole vedere
     if (s.exp_start && N_EXPS.indexOf(s.exp_start.id) >= 0 && isDay(s.exp_start.start))
       st.exps = (st.exps || []).filter(e => e.start !== s.exp_start.start).concat([{ id: s.exp_start.id, start: s.exp_start.start }]).slice(-12);
     if (s.exp_stop && isDay(s.exp_stop)) st.exps = (st.exps || []).map(e => e.start === s.exp_stop && !e.stop ? { id: e.id, start: e.start, stop: Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd') } : e);

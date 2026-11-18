@@ -2,7 +2,8 @@
  * Ritmo - motore fisso (bootstrap). Nel progetto Apps Script il file si chiama "Motore".
  *
  * È l'unico file di codice del progetto Apps Script, insieme alla pagina HTML "ritmo".
- * NON va più modificato: a ogni esecuzione scarica da GitHub (ramo main del repo teodrt/Switchbot)
+ * NON va più modificato: a ogni esecuzione scarica da GitHub (ramo main del repo teodrt/Switchbot,
+ * oppure il ramo scritto nella proprietà RITMO_BRANCH, es. "stabile")
  * i file elencati in apps-script/engine.json, li controlla e li esegue. Così ogni modifica al
  * codice arriva da sola. Se GitHub non risponde o il codice nuovo ha un errore di sintassi,
  * usa l'ultima versione buona salvata nelle proprietà dello script.
@@ -12,7 +13,8 @@
  * Installazione (una volta sola): incolla questo file come "Motore", salva, esegui ritmoInstall.
  */
 
-var RITMO_SRC = 'https://raw.githubusercontent.com/teodrt/Switchbot/main/apps-script/';
+var RITMO_SRC = 'https://raw.githubusercontent.com/teodrt/Switchbot/' +
+  (PropertiesService.getScriptProperties().getProperty('RITMO_BRANCH') || 'main') + '/apps-script/';
 var RITMO_CACHE_SEC = 900;      // il codice scaricato vale 15 minuti
 var RITMO_CHUNK_CACHE = 90000;  // CacheService: massimo 100 KB per valore
 var RITMO_CHUNK_PROP = 4000;    // proprietà: massimo 9 KB per valore (lettere accentate = 2 byte)
@@ -30,9 +32,11 @@ function ritmoInstall() {
   // Credenziali SwitchBot dal vecchio file "Codice", se c'è ancora (prima di cancellarlo).
   try { if (typeof TOKEN !== 'undefined' && TOKEN && !p.getProperty('SWITCHBOT_TOKEN')) p.setProperty('SWITCHBOT_TOKEN', TOKEN); } catch (e) {}
   try { if (typeof SECRET !== 'undefined' && SECRET && !p.getProperty('SWITCHBOT_SECRET')) p.setProperty('SWITCHBOT_SECRET', SECRET); } catch (e) {}
-  ['SHEET_ID', 'SWITCHBOT_TOKEN', 'SWITCHBOT_SECRET', 'GARMIN_API_KEY', 'RENPHO_EMAIL', 'RENPHO_PASSWORD'].forEach(function (k) {
+  ['SHEET_ID', 'GARMIN_API_KEY', 'RENPHO_EMAIL', 'RENPHO_PASSWORD'].forEach(function (k) {
     Logger.log(k + ': ' + (p.getProperty(k) ? 'presente' : 'MANCANTE'));
   });
+  Logger.log('Aria della camera: ' + (p.getProperty('SWITCHBOT_TOKEN') ? 'sensore SwitchBot proprio' : p.getProperty('AIR_SOURCE_ID') ? 'letta dal foglio condiviso (AIR_SOURCE_ID)' : 'nessuna'));
+  Logger.log('Ramo del codice: ' + (p.getProperty('RITMO_BRANCH') || 'main'));
   CacheService.getScriptCache().remove('RITMO_N');
   ritmoLoad_();
   Logger.log('Codice scaricato da GitHub e caricato (versione ' + p.getProperty('RITMO_MD5') + ').');

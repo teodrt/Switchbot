@@ -99,6 +99,12 @@ Check-in giornaliero scritto dall'app (`ritmoSaveCheckin` in `dashboard.gs`), un
 | F | `note` | testo libero, al massimo 280 caratteri |
 | G | `tags` | cosa hai fatto ieri e stanotte, separato da virgole: `fisio`, `antidolorifico`, `alcol`, `caffe` (dopo le 15), `cena` (tardi), `finestra` (aperta di notte) |
 
+## Foglio separato "Ritmo - Aria camera" (solo se si condivide l'aria)
+
+Scritto ogni ora da `apps-script/air.gs` di chi ha il sensore, scheda `Aria`: `timestamp`, `temp_c`, `rh_pct`,
+`co2_ppm` degli ultimi 45 giorni. Nient'altro. Chi lo riceve in sola lettura copia le righe nuove nella prima
+scheda del suo foglio (colonna `note` = `condivisa`).
+
 ## Regole
 
 - Le date usano sempre il fuso Europe/Madrid.

@@ -12,6 +12,7 @@ const E_TZ = 'Europe/Madrid';
 // cercava; se no si riprova ogni retryMin minuti fino a giveUp (poi il giorno è chiuso comunque).
 const E_JOBS = [
   { id: 'switchbot', fn: 'logReading', every: true },
+  { id: 'air', fn: 'airSync', every: true },
   { id: 'garmin', fn: 'garminDaily', daily: '07:30', until: 'gHasToday_', retryMin: 30, giveUp: '13:00' },
   { id: 'reminder', fn: 'nCheckinReminder', daily: '12:00' },
   { id: 'renpho', fn: 'renphoDaily', daily: '11:00' },
