@@ -97,6 +97,7 @@ Check-in giornaliero scritto dall'app (`ritmoSaveCheckin` in `dashboard.gs`), un
 | D | `mood` | 1-5 (giù ... ottimo) |
 | E | `pain` | 0-10 |
 | F | `note` | testo libero, al massimo 280 caratteri |
+| G | `tags` | cosa hai fatto il giorno prima, separato da virgole (oggi solo `fisio`) |
 
 ## Regole
 

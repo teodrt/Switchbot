@@ -9,7 +9,8 @@
 
 const N_TZ = 'Europe/Madrid';
 const N_DAYS = 400;   // notti mandate alla pagina
-const N_RECENT_DAYS = 7;   // giorni di letture grezze di casa mandate alla pagina
+const N_RECENT_DAYS = 30;  // giorni di storico di casa mandati alla pagina (ultimi 7 a 10 minuti, prima medie orarie)
+const N_RAW_DAYS = 7;
 
 function doGet() {
   const t = HtmlService.createTemplateFromFile('ritmo');
@@ -29,12 +30,19 @@ function nData_() {
     vals(ss.getSheetByName('Renpho')), Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd HH:mm'));
   out.activities = nActivities_(vals(ss.getSheetByName('Attivita')));
   out.mood = nMood_(vals(ss.getSheetByName(N_MOOD_TAB)));
+  out.settings = nSettings_();
   try { out.engine = typeof eStatus_ === 'function' ? eStatus_() : null; } catch (e) { out.engine = null; }
   return out;
 }
 
 const N_MOOD_TAB = 'Umore';
-const N_MOOD_HEADER = ['date', 'time', 'energy', 'mood', 'pain', 'note'];
+const N_MOOD_HEADER = ['date', 'time', 'energy', 'mood', 'pain', 'note', 'tags'];
+const N_TAGS = ['fisio'];   // caselle del check-in (cosa hai fatto ieri)
+
+/** Impostazioni dell'utente salvate dall'app (es. data dell'operazione): proprietà APP_SETTINGS, mai nel repo. */
+function nSettings_() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_SETTINGS') || '{}'); } catch (e) { return {}; }
+}
 
 /** Attività sportive (scheda "Attivita"): [data, ora, tipo, nome, minuti, km, FC media, FC max, kcal, TE aerobico, TE anaerobico, carico, VO2max]. */
 function nActivities_(rows) {
@@ -44,9 +52,12 @@ function nActivities_(rows) {
   const str = v => (v instanceof Date) ? Utilities.formatDate(v, N_TZ, 'yyyy-MM-dd') : String(v || '');
   return rows.slice(1).filter(r => /^\d{4}-\d{2}-\d{2}/.test(str(r[h.date]))).map(r => [
     str(r[h.date]).slice(0, 10), String(r[h.start] || '').slice(0, 5), String(r[h.type] || ''), String(r[h.name] || '').slice(0, 60),
-    num(r[h.duration_min]), num(r[h.distance_km]), num(r[h.avg_hr]), num(r[h.max_hr]), num(r[h.calories]),
+    num(r[h.duration_min]), num(r[h.distance_km]), num(r[h.avg_hr]), nHr_(num(r[h.max_hr])), num(r[h.calories]),
     num(r[h.aerobic_te]), num(r[h.anaerobic_te]), num(r[h.training_load]), num(r[h.vo2max])]);
 }
+
+/** Battito oltre 200 = errore del sensore al polso: scartato. */
+function nHr_(v) { return v !== null && v > 200 ? null : v; }
 
 /** Check-in (scheda "Umore"): una riga per giorno. */
 function nMood_(rows) {
@@ -56,7 +67,8 @@ function nMood_(rows) {
   const num = v => (typeof v === 'number' && isFinite(v)) ? v : null;
   return rows.slice(1).filter(r => /^\d{4}-\d{2}-\d{2}$/.test(str(r[h.date]))).map(r => ({
     date: str(r[h.date]), time: String(r[h.time] || ''), energy: num(r[h.energy]), mood: num(r[h.mood]),
-    pain: num(r[h.pain]), note: String(r[h.note] || '').slice(0, 280) }));
+    pain: num(r[h.pain]), note: String(r[h.note] || '').slice(0, 280),
+    tags: h.tags === undefined ? [] : String(r[h.tags] || '').split(',').map(t => t.trim()).filter(t => N_TAGS.indexOf(t) >= 0) }));
 }
 
 /**
@@ -71,22 +83,31 @@ function ritmoSaveCheckin(c) {
       ref: String(c.ref || '').slice(0, 12), view: String(c.view || '').slice(0, 20), w: Number(c.w) || null }));
     return { ok: true };
   }
+  // Impostazioni dall'app (nessun dato nel foglio): per ora solo la data dell'operazione.
+  if (c && c.settings) {
+    const st = nSettings_(), op = String(c.settings.op_date || '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(op)) st.op_date = op; else if (op === '') delete st.op_date;
+    PropertiesService.getScriptProperties().setProperty('APP_SETTINGS', JSON.stringify(st));
+    return st;
+  }
   const day = Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd');
   const date = (c && /^\d{4}-\d{2}-\d{2}$/.test(c.date || '')) ? c.date : day;
   const int = (v, a, b) => { const x = Math.round(Number(v)); return isFinite(x) && x >= a && x <= b ? x : ''; };
   const row = [date, Utilities.formatDate(new Date(), N_TZ, 'HH:mm'), int(c && c.energy, 1, 5), int(c && c.mood, 1, 5),
-    int(c && c.pain, 0, 10), String((c && c.note) || '').replace(/[\r\n]+/g, ' ').slice(0, 280)];
+    int(c && c.pain, 0, 10), String((c && c.note) || '').replace(/[\r\n]+/g, ' ').slice(0, 280),
+    ((c && c.tags) || []).filter(t => N_TAGS.indexOf(t) >= 0).join(',')];
   const lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
     const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
     const sh = ss.getSheetByName(N_MOOD_TAB) || ss.insertSheet(N_MOOD_TAB);
     sh.getRange('A:B').setNumberFormat('@');
     if (sh.getLastRow() === 0) sh.appendRow(N_MOOD_HEADER);
+    else if (sh.getLastColumn() < N_MOOD_HEADER.length) sh.getRange(1, 1, 1, N_MOOD_HEADER.length).setValues([N_MOOD_HEADER]);
     const i = eKeys_(sh).indexOf(date);
     if (i >= 0) sh.getRange(i + 2, 1, 1, row.length).setValues([row]); else eAppend_(sh, [row], 2);
   } finally { lock.releaseLock(); }
   return { date: row[0], time: row[1], energy: row[2] === '' ? null : row[2], mood: row[3] === '' ? null : row[3],
-    pain: row[4] === '' ? null : row[4], note: row[5] };
+    pain: row[4] === '' ? null : row[4], note: row[5], tags: row[6] ? row[6].split(',') : [] };
 }
 
 /** Funzione pura (provabile fuori da Apps Script): righe delle tre schede -> dati per la pagina. */
@@ -217,11 +238,34 @@ function nBuild_(sbRows, gRows, rRows, now) {
   });
   // Ultimi giorni di letture grezze di casa: [minuti assoluti, CO2, temp, umidità, temp e umidità seconda stanza].
   const lastT = air.length ? air[air.length - 1].t : 0;
-  const recent = air.filter(p => p.t >= lastT - N_RECENT_DAYS * 1440)
-    .map(p => [p.t, p.co2, p.temp, p.rh, p.htemp, p.hrh]);
+  const cutRaw = lastT - N_RAW_DAYS * 1440, hours = {};
+  air.filter(p => p.t >= lastT - N_RECENT_DAYS * 1440 && p.t < cutRaw).forEach(p => { const k = Math.floor(p.t / 60) * 60; (hours[k] = hours[k] || []).push(p); });
+  const mean = (a, f) => { const v = a.map(f).filter(x => typeof x === 'number' && isFinite(x)); return v.length ? Math.round(v.reduce((s, x) => s + x, 0) / v.length * 10) / 10 : null; };
+  const recent = Object.keys(hours).map(Number).sort((a, b) => a - b)
+    .map(k => [k, mean(hours[k], p => p.co2), mean(hours[k], p => p.temp), mean(hours[k], p => p.rh), mean(hours[k], p => p.htemp), mean(hours[k], p => p.hrh)])
+    .concat(air.filter(p => p.t >= cutRaw).map(p => [p.t, p.co2, p.temp, p.rh, p.htemp, p.hrh]));
 
   return { now: now, last: last, series: series, win: win, nights: nights, body: body,
     nightSeries: nightSeries, recent: recent,
     room: latest ? { ts: latest.ts, co2: latest.co2, temp: latest.temp, rh: latest.rh, bat: latest.bat } : null,
     hub: latestHub };
+}
+
+/**
+ * Promemoria del check-in (dal pianificatore, alle 12): una mail breve se oggi manca il check-in.
+ * Restituisce true se ha mandato la mail.
+ */
+function nCheckinReminder() {
+  const p = PropertiesService.getScriptProperties();
+  const ss = SpreadsheetApp.openById(p.getProperty('SHEET_ID'));
+  const sh = ss.getSheetByName(N_MOOD_TAB);
+  const today = Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd');
+  if (sh && eKeys_(sh).indexOf(today) >= 0) return false;
+  const url = p.getProperty('RITMO_URL') || '';
+  MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: 'Ritmo · come ti senti oggi?', name: 'Ritmo',
+    htmlBody: '<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;color:#1d2433">' +
+      '<p>Non hai ancora fatto il check-in di oggi: energia, umore, dolore e se ieri hai fatto fisio.</p>' +
+      '<p>Bastano 10 secondi e ogni giorno in più aiuta Ritmo a capire cosa ti fa dormire e recuperare meglio.</p>' +
+      (url ? '<p><a href="' + url + '" style="display:inline-block;background:#ff6a2b;color:#fff;text-decoration:none;padding:11px 20px;border-radius:12px;font-weight:600">Apri Ritmo</a></p>' : '<p>Apri Ritmo dal tuo link.</p>') + '</div>' });
+  return true;
 }

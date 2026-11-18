@@ -8,10 +8,12 @@
 const E_TZ = 'Europe/Madrid';
 
 // Lavori ricorrenti. every: ogni giro (10 minuti); daily: una volta al giorno dopo l'ora indicata;
-// weekly: [giorno ISO 1 = lunedì, ora].
+// weekly: [giorno ISO 1 = lunedì, ora]. until: funzione che dice se il lavoro ha trovato quello che
+// cercava; se no si riprova ogni retryMin minuti fino a giveUp (poi il giorno è chiuso comunque).
 const E_JOBS = [
   { id: 'switchbot', fn: 'logReading', every: true },
-  { id: 'garmin', fn: 'garminDaily', daily: '10:00' },
+  { id: 'garmin', fn: 'garminDaily', daily: '07:30', until: 'gHasToday_', retryMin: 30, giveUp: '13:00' },
+  { id: 'reminder', fn: 'nCheckinReminder', daily: '12:00' },
   { id: 'renpho', fn: 'renphoDaily', daily: '11:00' },
   { id: 'report', fn: 'ritmoReportWeekly', weekly: [1, '08:40'] }
 ];
@@ -37,9 +39,13 @@ function ritmoEngineTick_() {
     else if (j.weekly) due = isoDow === j.weekly[0] && hm >= j.weekly[1] && p.getProperty(doneKey) !== day;
     if (!due) return;
     if (!j.every && Date.now() - +(p.getProperty(failKey) || 0) < 3600 * 1000) return;   // riprova dopo un'ora
+    const nextKey = 'JOBNEXT_' + j.id;
+    if (j.until && Date.now() < +(p.getProperty(nextKey) || 0)) return;
     try {
       globalThis[j.fn]();
-      if (!j.every) { p.setProperty(doneKey, day); eLog_('ok ' + j.id); }
+      if (j.until && !globalThis[j.until]() && hm < j.giveUp) {
+        p.setProperty(nextKey, String(Date.now() + j.retryMin * 60 * 1000));   // dati non ancora arrivati: si riprova
+      } else if (!j.every) { p.setProperty(doneKey, day); p.deleteProperty(nextKey); eLog_('ok ' + j.id); }
       p.deleteProperty(failKey);
     } catch (e) {
       p.setProperty(failKey, String(Date.now()));

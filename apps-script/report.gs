@@ -74,7 +74,9 @@ function wkBuild_(D, today) {
   const weight = body.length ? { now: body[body.length - 1].w, was: bodyBefore.length ? bodyBefore[bodyBefore.length - 1].w : null } : null;
   const mood = (D.mood || []).filter(m => inW(m.date, start, end)), moodPrev = (D.mood || []).filter(m => inW(m.date, pStart, pEnd));
   const feel = { n: mood.length, energy: avg(mood.map(m => m.energy)), mood: avg(mood.map(m => m.mood)), pain: avg(mood.map(m => m.pain)),
-    energyWas: avg(moodPrev.map(m => m.energy)), painWas: avg(moodPrev.map(m => m.pain)) };
+    energyWas: avg(moodPrev.map(m => m.energy)), moodWas: avg(moodPrev.map(m => m.mood)), painWas: avg(moodPrev.map(m => m.pain)),
+    fisio: mood.filter(m => (m.tags || []).indexOf('fisio') >= 0).length,
+    notes: mood.filter(m => m.note).sort((a, b) => a.date < b.date ? -1 : 1).map(m => [m.date, m.note]) };
   // Le variazioni più grandi rispetto alla variabilità delle 4 settimane prima.
   const sd = (get) => { const v = prev.map(get).filter(isNum); if (v.length < 5) return null; const m = avg(v); return Math.sqrt(v.reduce((s, x) => s + (x - m) * (x - m), 0) / (v.length - 1)); };
   const getters = { score: n => n.score, sleep_h: n => n.sleep_h, bed: n => bed(n.bed_start), hrv: n => n.hrv, rhr: n => n.rhr, bb: n => n.bb_wake, stress: n => n.stress, steps: n => n.steps };
@@ -120,8 +122,14 @@ function wkHtml_(w, url) {
     '<p style="margin:12px 0 0;font-size:14px">' + (w.sport.n ? '<b>' + w.sport.n + '</b> ' + (w.sport.n === 1 ? 'allenamento' : 'allenamenti') + ', <b>' + f(w.sport.min) + '</b> minuti' + (w.sport.load ? ', carico ' + f(w.sport.load) : '') + ' (media delle 4 settimane prima: ' + f(w.sport.prevMinWeek) + ' minuti).' : 'Nessun allenamento registrato: durante il recupero va benissimo.') + '</p>');
   if (w.weight) h += card('Corpo', '<p style="margin:0;font-size:14px">Peso <b>' + f(w.weight.now, 1) + ' kg</b>' + (isNum(w.weight.was) ? ' (' + (w.weight.now - w.weight.was > 0 ? '+' : '') + f(w.weight.now - w.weight.was, 1) + ' kg dalla pesata precedente)' : '') + '.</p>');
   h += card('Come ti sei sentito', w.feel.n ? '<p style="margin:0;font-size:14px">' + w.feel.n + ' check-in · energia <b>' + f(w.feel.energy, 1) + '</b>/5 · umore <b>' + f(w.feel.mood, 1) + '</b>/5 · dolore <b>' + f(w.feel.pain, 1) + '</b>/10' +
-    (isNum(w.feel.painWas) ? ' (prima ' + f(w.feel.painWas, 1) + ')' : '') + '.</p>' : '<p style="margin:0;font-size:14px;color:#3b4560">Nessun check-in questa settimana. Bastano pochi secondi al giorno dall\'app: più check-in, più Ritmo capisce cosa ti fa stare bene.</p>');
+    (isNum(w.feel.painWas) ? ' (prima ' + f(w.feel.painWas, 1) + ')' : '') + '.</p>' +
+    (isNum(w.feel.moodWas) ? '<p style="margin:6px 0 0;font-size:13px;color:#3b4560">Settimana prima: energia ' + f(w.feel.energyWas, 1) + ', umore ' + f(w.feel.moodWas, 1) + ', dolore ' + f(w.feel.painWas, 1) + '.</p>' : '') +
+    (w.feel.fisio ? '<p style="margin:6px 0 0;font-size:14px">Fisioterapia: <b>' + w.feel.fisio + '</b> ' + (w.feel.fisio === 1 ? 'seduta' : 'sedute') + '.</p>' : '') +
+    (w.feel.notes.length ? '<p style="margin:12px 0 4px;font-size:13px;color:#3b4560">I tuoi commenti</p>' + w.feel.notes.map(nt => '<p style="margin:0 0 6px;font-size:14px"><b>' + wkDay_(nt[0]) + '</b> · ' + wkEsc_(nt[1]) + '</p>').join('') : '') : '<p style="margin:0;font-size:14px;color:#3b4560">Nessun check-in questa settimana. Bastano pochi secondi al giorno dall\'app: più check-in, più Ritmo capisce cosa ti fa stare bene.</p>');
   if (url) h += '<div style="text-align:center;margin:18px 0 6px"><a href="' + url + '" style="display:inline-block;background:#3d56d4;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600">Apri Ritmo</a></div>';
   h += '<p style="text-align:center;font-size:11px;color:#8a93ab;margin-top:14px">Confronto con le 4 settimane precedenti. Generato automaticamente da Ritmo.</p></div></div>';
   return h;
 }
+
+function wkEsc_(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function wkDay_(d) { const g = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'][new Date(d + 'T12:00:00Z').getUTCDay()]; return g + ' ' + (+d.slice(8, 10)) + '/' + (+d.slice(5, 7)); }

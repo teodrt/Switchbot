@@ -38,7 +38,8 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
   globale. Cache 15 minuti (CacheService); ultima versione buona salvata nelle proprietà
   (`RITMO_P*`, `RITMO_MD5`), usata se GitHub non risponde o il codice nuovo non compila.
 - **Un solo trigger**: `ritmoTick` ogni 10 minuti. `engine.gs` decide i lavori (`E_JOBS`: SwitchBot a
-  ogni giro, Garmin dopo le 10, Renpho dopo le 11, report il lunedì dopo le 8:40), le operazioni una
+  ogni giro, Garmin dalle 7:30 ogni 30 minuti finché non arriva la notte appena passata (al massimo fino alle 13),
+  Renpho dopo le 11, promemoria del check-in alle 12 se manca, report il lunedì dopo le 8:40), le operazioni una
   tantum (`E_MIGRATIONS`, una per giro, registrate in `MIGRATIONS_DONE`) e rimuove ogni altro trigger.
   Un lavoro fallito si riprova dopo un'ora. Registro in `ENGINE_LOG`, mostrato nell'app (Insight).
 - Per cambiare il codice di raccolta: modificare i `.gs` su `main`. Niente da incollare. Un nuovo file
@@ -60,6 +61,11 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
   foglio (xlsx), ricostruire `DATA` con `nBuild_` e renderizzare `app/` con Playwright.
 
 ## Pubblicare modifiche all'app
+
+- Controlli automatici: `node tests/run.js` (sintassi, nomi globali unici, `nBuild_` su un foglio finto,
+  scritture senza doppioni). Girano su GitHub a ogni pull request (`.github/workflows/check.yml`).
+- Impostazioni dell'utente (es. data dell'operazione) si salvano dall'app nella proprietà `APP_SETTINGS`
+  (`ritmoSaveCheckin({settings})`), mai nel repo. `RITMO_URL` (facoltativa) è il link messo nelle mail.
 
 - L'interfaccia (`app/ritmo.js`, `app/ritmo.css`) si carica a ogni apertura dall'ultimo commit di
   `main`: il caricatore chiede lo SHA a api.github.com e usa `cdn.jsdelivr.net/gh/teodrt/Switchbot@<sha>`,
