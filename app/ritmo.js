@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '18 nov 2026 · v5.4';
+  const RELEASE = '18 nov 2026 · v5.4.1';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -11,7 +11,7 @@
 <header class="top" id="top"><div class="top-in">
   <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 13h4l2.5-6 4 11 3-8 2 3H22"/></svg></span><div><b>Ritmo</b><span id="hello"></span></div></div>
   <span id="ttl"></span>
-  <div class="top-right"><button class="iconbtn" id="insightBtn" aria-label="Insight"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button></div>
+  <div class="top-right"><button class="iconbtn theme" id="themeBtn" aria-label="Tema"></button><button class="iconbtn" id="insightBtn" aria-label="Insight"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button></div>
 </div></header>
 <main id="main"></main>
 <button class="fab" id="fab" aria-label="Check-in: come ti senti"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -639,6 +639,17 @@
   const tabsEl = $('#tabs'), pill = $('#pill'), main = $('#main');
   TABS.forEach(([id, label, col]) => { const b = h('button', 'tab', icon(id) + '<span>' + label + '</span>'); b.dataset.id = id; b.style.setProperty('--tc', `var(${col})`); b.onclick = () => { buzz(); go(id); }; tabsEl.appendChild(b); });
   $('#insightBtn').onclick = () => { buzz(); go('insight'); };
+  // Tema: automatico (segue il telefono), chiaro o scuro. Scelta ricordata in questo browser.
+  const THEMES = [['auto', 'automatico, segue il telefono', '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>'],
+    ['light', 'chiaro', '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'],
+    ['dark', 'scuro', '<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>']];
+  const setTheme = k => { const t = THEMES.find(x => x[0] === k) || THEMES[0];
+    if (t[0] === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t[0]);
+    const b = $('#themeBtn'); b.innerHTML = `<svg viewBox="0 0 24 24">${t[2]}</svg>`; b.setAttribute('aria-label', 'Tema ' + t[1]);
+    try { localStorage.setItem('ritmoTheme', t[0]); } catch (e) {} return t[0]; };
+  let theme = 'auto'; try { theme = localStorage.getItem('ritmoTheme') || 'auto'; } catch (e) {}
+  theme = setTheme(theme);
+  $('#themeBtn').onclick = () => { buzz(); theme = setTheme(THEMES[(THEMES.findIndex(x => x[0] === theme) + 1) % 3][0]); toast('Tema ' + THEMES.find(x => x[0] === theme)[1]) };
   { const br = $('.brand'); br.style.cursor = 'pointer'; br.setAttribute('role', 'button'); br.setAttribute('aria-label', 'Torna a Oggi'); br.onclick = () => { buzz(); go('oggi'); }; }
   const hr = +((DATA.now || '').slice(11, 13) || 12);
   $('#hello').textContent = (hr < 5 ? 'Buonanotte' : hr < 13 ? 'Buongiorno' : hr < 18 ? 'Buon pomeriggio' : 'Buonasera') + ' · ' + GIORNI[dow(today)] + ' ' + dLabel(today);
