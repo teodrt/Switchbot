@@ -159,6 +159,16 @@ function garminDaily() {
   catch (e) { Logger.log('Attività: ' + e.message); }
 }
 
+/** true se nella scheda Garmin c'è già lo sleep score della notte appena passata (data di oggi). */
+function gHasToday_() {
+  const sh = SpreadsheetApp.openById(gcfg_('SHEET_ID')).getSheetByName(GARMIN_TAB);
+  if (!sh) return false;
+  const i = eKeys_(sh).indexOf(gday_(new Date()));
+  if (i < 0) return false;
+  const v = sh.getRange(i + 2, 2).getValue();
+  return v !== '' && v !== null;
+}
+
 /** Importa gli ultimi 90 giorni, a blocchi di 31 (limite dell'API). */
 function garminBackfill() {
   const end = new Date();

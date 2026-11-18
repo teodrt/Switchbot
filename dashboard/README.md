@@ -31,6 +31,15 @@ Spiegazioni: ogni elemento grafico che non è ovvio (colori della timeline: solo
 barre dello sport, settori e contagiri) ha un fumetto. Col mouse compare al passaggio; col dito il primo
 tocco mostra il fumetto e il secondo fa l'azione (es. apre la notte). "‹ Oggi" e il logo riportano a Oggi.
 
+## Recupero dall'operazione
+
+Riquadro in Oggi: per sleep score, HRV, battito a riposo (invertito), sonno profondo, Body Battery e passi,
+mediana delle ultime 7 notti divisa per la mediana dei 60 giorni prima dell'operazione (100 % = come prima;
+verde ≥ 97 %, giallo ≥ 85 %, rosso sotto). Più il dolore medio dei check-in. La data si inserisce dall'app.
+Sopra il contagiri c'è sempre la notte a cui si riferisce (in giallo se non è ancora quella appena passata).
+Casella "Ho fatto fisio" nel check-in: entra nell'analisi come fattore (notti dopo la fisio contro le altre).
+Tema: pulsante in alto a destra (automatico secondo il telefono, chiaro, scuro), ricordato nel browser.
+
 ## Punteggio di recupero
 
 Media pesata di: sleep score (35 %), HRV rispetto alla mediana delle 30 notti precedenti (25 %),

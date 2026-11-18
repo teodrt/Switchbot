@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '18 nov 2026 · v5.3.1';
+  const RELEASE = '18 nov 2026 · v5.4.1';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -11,7 +11,7 @@
 <header class="top" id="top"><div class="top-in">
   <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 13h4l2.5-6 4 11 3-8 2 3H22"/></svg></span><div><b>Ritmo</b><span id="hello"></span></div></div>
   <span id="ttl"></span>
-  <div class="top-right"><button class="iconbtn" id="insightBtn" aria-label="Insight"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button></div>
+  <div class="top-right"><button class="iconbtn theme" id="themeBtn" aria-label="Tema"></button><button class="iconbtn" id="insightBtn" aria-label="Insight"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button></div>
 </div></header>
 <main id="main"></main>
 <button class="fab" id="fab" aria-label="Check-in: come ti senti"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -178,6 +178,7 @@
       { id: 'rh', label: 'umidità della camera', axis: 'umidità camera (%)', get: n => n.air ? n.air.rh_avg : null, show: v => fmt(v) + ' %', room: true, when: 'Con aria più umida', hiP: v => 'l\'umidità è almeno al ' + fmt(v) + ' %', loP: v => 'è al massimo al ' + fmt(v) + ' %' },
       { id: 'sscore', label: 'sleep score della notte', axis: 'sleep score della notte', get: n => n.score, show: v => fmt(v), only: MOODO, when: 'Dopo notti migliori', hiP: v => 'lo sleep score è almeno ' + fmt(v), loP: v => 'è al massimo ' + fmt(v) },
       { id: 'shrv', label: 'HRV della notte', axis: 'HRV della notte (ms)', get: n => n.hrv, show: v => fmt(v) + ' ms', only: MOODO, when: 'Con HRV più alta', hiP: v => 'l\'HRV è almeno ' + fmt(v) + ' ms', loP: v => 'è al massimo ' + fmt(v) + ' ms' },
+      { id: 'fisio', label: 'fisioterapia del giorno prima', get: n => MB[n.date] ? ((MB[n.date].tags || []).indexOf('fisio') >= 0 ? 1 : 0) : null, binary: true, hiName: 'dopo la fisio', loName: 'senza fisio', when: 'Dopo la fisioterapia' },
       { id: 'weekend', label: 'notti del weekend', get: n => { const w = dow(n.date); return w === 6 || w === 0 ? 1 : 0; }, binary: true, hiName: 'weekend', loName: 'in settimana', when: 'Nel weekend' }
     ];
     const OUTCOMES = [
@@ -428,16 +429,16 @@
     const arcD = (f0, f1, r) => { const p0 = pt(f0, r), p1 = pt(f1, r); return `M${p0[0].toFixed(1)},${p0[1].toFixed(1)} A${r},${r} 0 ${(f1 - f0) * SW > 180 ? 1 : 0} 1 ${p1[0].toFixed(1)},${p1[1].toFixed(1)}`; };
     const L = 2 * Math.PI * R * SW / 360;
     const ticks = [...Array(51)].map((_, i) => { const f = i / 50, big = i % 5 === 0, a = pt(f, R - 12), c = pt(f, R - (big ? 21 : 16));
-      return `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${c[0].toFixed(1)}" y2="${c[1].toFixed(1)}" stroke="${i <= 20 ? 'var(--bad)' : 'rgba(255,255,255,.35)'}" stroke-width="${big ? 1.6 : .8}" opacity="${big ? .9 : .5}"/>`; }).join('');
+      return `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${c[0].toFixed(1)}" y2="${c[1].toFixed(1)}" stroke="${i <= 20 ? 'var(--bad)' : 'var(--tick)'}" stroke-width="${big ? 1.6 : .8}" opacity="${big ? .9 : .5}"/>`; }).join('');
     const nums = [0, 20, 40, 60, 80, 100].map(n => { const q = pt(n / 100, R - 31); return `<text x="${q[0].toFixed(1)}" y="${(q[1] + 3).toFixed(1)}" text-anchor="middle">${n}</text>`; }).join('');
     const ang = A0 + (v / 100) * SW + 90, tip = R - 24;
     return `<svg class="tacho"${tipAttr('<b>Recupero ' + (isNum(score) ? score : '-') + '/100</b><br>Media pesata dei 4 settori qui sotto: sonno 35 %, HRV 25 %, riposo 20 %, energia 20 %. 80+ pronto, 65-79 discreto, 50-64 con calma.')} viewBox="0 0 240 200" role="img" aria-label="Recupero ${isNum(score) ? score : 'non disponibile'} su 100">
       <defs><linearGradient id="tg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3d6bff"/><stop offset=".55" stop-color="#ffb27a"/><stop offset="1" stop-color="#ff6a2b"/></linearGradient></defs>
-      <path d="${arcD(0, 1, R)}" stroke="rgba(255,255,255,.07)" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <path d="${arcD(0, 1, R)}" stroke="var(--arcbase)" stroke-width="9" fill="none" stroke-linecap="round"/>
       <path class="arc" d="${arcD(0, 1, R)}" stroke="url(#tg)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="${L.toFixed(1)}" stroke-dashoffset="${L.toFixed(1)}" data-to="${(L * (1 - v / 100)).toFixed(1)}" style="filter:drop-shadow(0 0 8px rgba(255,122,60,.55))"/>
       ${ticks}${nums}
       <g class="needle" style="transform:rotate(${A0 + 90}deg)" data-rot="${ang.toFixed(1)}"><line x1="${cx}" y1="${cy + 14}" x2="${cx}" y2="${cy - tip}" stroke="#ff6a2b" stroke-width="2.4" stroke-linecap="round" style="filter:drop-shadow(0 0 6px #ff6a2b)"/></g>
-      <circle cx="${cx}" cy="${cy}" r="6" fill="#0b0d14" stroke="#ff6a2b" stroke-width="2"/>
+      <circle cx="${cx}" cy="${cy}" r="6" fill="var(--hole)" stroke="#ff6a2b" stroke-width="2"/>
       <text class="tn" x="${cx}" y="${cy + 46}" text-anchor="middle" data-count="${isNum(score) ? score : ''}">${isNum(score) ? '0' : '-'}</text>
       <text class="tl" x="${cx}" y="${cy + 62}" text-anchor="middle">RECUPERO / 100</text></svg>`;
   };
@@ -462,10 +463,10 @@
     const mB = pt(b, 92), mE = pt(e, 92);
     return `<svg class="dial" viewBox="0 0 200 200" role="img" aria-label="Orario del sonno">
       <defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3d6bff"/><stop offset="1" stop-color="#b46cff"/></linearGradient></defs>
-      <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="14"/>${avg}${ticks}${lab}
+      <circle cx="100" cy="100" r="92" fill="none" stroke="var(--arcbase)" stroke-width="14"/>${avg}${ticks}${lab}
       <path class="draw" d="${arc(b, e, 92)}" stroke="url(#dg)" stroke-width="14" fill="none" stroke-linecap="round" style="filter:drop-shadow(0 0 8px rgba(76,141,255,.55))"/>
-      <circle cx="${mB[0].toFixed(1)}" cy="${mB[1].toFixed(1)}" r="9" fill="#0b0d14" stroke="#4c8dff" stroke-width="2"/><text x="${mB[0].toFixed(1)}" y="${(mB[1] + 3.5).toFixed(1)}" text-anchor="middle" style="font-size:9px;fill:#8ab4ff">☾</text>
-      <circle cx="${mE[0].toFixed(1)}" cy="${mE[1].toFixed(1)}" r="9" fill="#0b0d14" stroke="#ff7a3c" stroke-width="2"/><text x="${mE[0].toFixed(1)}" y="${(mE[1] + 3.5).toFixed(1)}" text-anchor="middle" style="font-size:9px;fill:#ffb27a">☀</text>
+      <circle cx="${mB[0].toFixed(1)}" cy="${mB[1].toFixed(1)}" r="9" fill="var(--hole)" stroke="#4c8dff" stroke-width="2"/><text x="${mB[0].toFixed(1)}" y="${(mB[1] + 3.5).toFixed(1)}" text-anchor="middle" style="font-size:9px;fill:#8ab4ff">☾</text>
+      <circle cx="${mE[0].toFixed(1)}" cy="${mE[1].toFixed(1)}" r="9" fill="var(--hole)" stroke="#ff7a3c" stroke-width="2"/><text x="${mE[0].toFixed(1)}" y="${(mE[1] + 3.5).toFixed(1)}" text-anchor="middle" style="font-size:9px;fill:#ffb27a">☀</text>
       <text class="dc" x="100" y="102" text-anchor="middle">${hm(n.sleep_h)}</text><text class="ds" x="100" y="118" text-anchor="middle">${esc(n.bed_start)} → ${esc(n.bed_end)}</text></svg>`;
   };
   const confetti = () => { const f = h('div', 'flash'); document.body.appendChild(f); setTimeout(() => f.remove(), 1300); };
@@ -568,7 +569,7 @@
   const moodLevel = (v, hi) => !isNum(v) ? '' : hi ? (v >= 4 ? 'good' : v >= 3 ? 'warn' : 'bad') : (v <= 2 ? 'good' : v <= 5 ? 'warn' : 'bad');
   const diaryRow = (d, m) => m
     ? `<button class="drow" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span>
-        <span class="dv"><span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span><span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span><span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span></span>
+        <span class="dv"><span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span><span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span><span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span>${(m.tags || []).indexOf('fisio') >= 0 ? '<span class="pill">fisio ieri</span>' : ''}</span>
         ${m.note ? `<span class="dn">“${esc(m.note)}”</span>` : ''}</button>`
     : `<button class="drow miss" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span><span class="dv faint">nessun check-in · <span class="more">aggiungi +</span></span></button>`;
   const bindDiary = el => el.querySelectorAll('.drow').forEach(b => { b.onclick = e => { e.stopPropagation(); buzz(); openCheckin(null, b.dataset.day); }; });
@@ -602,11 +603,17 @@
     const pr = $('#painr', pain); pr.oninput = () => { cur.pain = +pr.value; $('#pv', pain).textContent = pr.value; };
     const note = h('div', '', '<span class="eyebrow" style="margin-bottom:8px">Nota (facoltativa)</span>'); note.style.display = 'grid'; note.style.gap = '8px';
     const ta = h('textarea'); ta.id = 'cinote'; ta.placeholder = 'Es. fisioterapia, dormito male, giornata pesante'; ta.maxLength = 280; ta.value = cur.note || ''; note.appendChild(ta); box.appendChild(note);
+    cur.tags = (cur.tags || []).slice();
+    const tg = h('div', '', `<span class="eyebrow" style="margin-bottom:8px">${isToday ? 'Ieri' : 'Il giorno prima'}</span>`); tg.style.display = 'grid'; tg.style.gap = '8px';
+    const tgc = h('div', 'fchips');
+    [['fisio', 'Ho fatto fisio']].forEach(t => { const b = h('button', 'chip', t[1]); b.setAttribute('aria-pressed', String(cur.tags.indexOf(t[0]) >= 0));
+      b.onclick = () => { buzz(); const i = cur.tags.indexOf(t[0]); if (i >= 0) cur.tags.splice(i, 1); else cur.tags.push(t[0]); b.setAttribute('aria-pressed', String(i < 0)); }; tgc.appendChild(b); });
+    tg.appendChild(tgc); box.insertBefore(tg, note);
     const save = h('button', 'btn', icon('check') + 'Salva');
     save.querySelector('svg').style.cssText = 'width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.6';
     save.onclick = () => {
       if (!cur.energy || !cur.mood) { toast('Scegli energia e umore'); return; }
-      const payload = { date: day, energy: cur.energy, mood: cur.mood, pain: cur.pain, note: ta.value.trim() };
+      const payload = { date: day, energy: cur.energy, mood: cur.mood, pain: cur.pain, note: ta.value.trim(), tags: cur.tags };
       const run = window.google && google.script && google.script.run;
       if (!run) { toast('Anteprima: il salvataggio funziona solo nell\'app Ritmo'); return; }
       save.disabled = true; save.textContent = 'Salvo...';
@@ -632,6 +639,17 @@
   const tabsEl = $('#tabs'), pill = $('#pill'), main = $('#main');
   TABS.forEach(([id, label, col]) => { const b = h('button', 'tab', icon(id) + '<span>' + label + '</span>'); b.dataset.id = id; b.style.setProperty('--tc', `var(${col})`); b.onclick = () => { buzz(); go(id); }; tabsEl.appendChild(b); });
   $('#insightBtn').onclick = () => { buzz(); go('insight'); };
+  // Tema: automatico (segue il telefono), chiaro o scuro. Scelta ricordata in questo browser.
+  const THEMES = [['auto', 'automatico, segue il telefono', '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>'],
+    ['light', 'chiaro', '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'],
+    ['dark', 'scuro', '<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>']];
+  const setTheme = k => { const t = THEMES.find(x => x[0] === k) || THEMES[0];
+    if (t[0] === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t[0]);
+    const b = $('#themeBtn'); b.innerHTML = `<svg viewBox="0 0 24 24">${t[2]}</svg>`; b.setAttribute('aria-label', 'Tema ' + t[1]);
+    try { localStorage.setItem('ritmoTheme', t[0]); } catch (e) {} return t[0]; };
+  let theme = 'auto'; try { theme = localStorage.getItem('ritmoTheme') || 'auto'; } catch (e) {}
+  theme = setTheme(theme);
+  $('#themeBtn').onclick = () => { buzz(); theme = setTheme(THEMES[(THEMES.findIndex(x => x[0] === theme) + 1) % 3][0]); toast('Tema ' + THEMES.find(x => x[0] === theme)[1]) };
   { const br = $('.brand'); br.style.cursor = 'pointer'; br.setAttribute('role', 'button'); br.setAttribute('aria-label', 'Torna a Oggi'); br.onclick = () => { buzz(); go('oggi'); }; }
   const hr = +((DATA.now || '').slice(11, 13) || 12);
   $('#hello').textContent = (hr < 5 ? 'Buonanotte' : hr < 13 ? 'Buongiorno' : hr < 18 ? 'Buon pomeriggio' : 'Buonasera') + ' · ' + GIORNI[dow(today)] + ' ' + dLabel(today);
@@ -673,6 +691,43 @@
     (ENG && ENG.last ? ` · motore ${esc(ENG.last.slice(11))}${ENG.code ? ' (' + esc(ENG.code.slice(0, 7)) + ')' : ''}` : '');
   const setBadge = () => { const n = analysis().findings.length; const b = $('#insightBtn'); const old = $('.badge', b); if (old) old.remove(); if (n) b.insertAdjacentHTML('beforeend', `<span class="badge">${n}</span>`); };
 
+  // Recupero dall'operazione: ogni misura di adesso (mediana delle ultime 7 notti) rispetto al tuo
+  // normale di prima (mediana dei 60 giorni prima dell'operazione). La data si salva dall'app (APP_SETTINGS).
+  const SETTINGS = DATA.settings || {};
+  const saveSettings = (st, done) => {
+    const run = window.google && google.script && google.script.run;
+    if (!run) { toast('Anteprima: il salvataggio funziona solo nell\'app Ritmo'); return; }
+    run.withSuccessHandler(r => { Object.keys(SETTINGS).forEach(k => delete SETTINGS[k]); Object.assign(SETTINGS, r || {}); toast('Salvato'); if (done) done(); rerender(); })
+      .withFailureHandler(err => toast('Non salvato: ' + (err && err.message ? err.message : 'errore'))).ritmoSaveCheckin({ settings: st });
+  };
+  const recoveryCard = () => {
+    const c = h('section', 'card'); paint(c, 'corpo');
+    const OP = SETTINGS.op_date;
+    const ask = () => {
+      c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Recupero dall'operazione</span></div>
+        <p class="small muted">Inserisci la data dell'operazione: Ritmo confronta ogni misura di adesso con il tuo normale di prima.</p>
+        <div class="row-wrap"><input type="date" id="opd" max="${today}" value="${OP || ''}" class="dinput"><button class="btn" id="ops" style="padding:10px 16px;font-size:.9rem">Salva</button></div>`;
+      $('#ops', c).onclick = e => { e.stopPropagation(); const v = $('#opd', c).value; if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { toast('Scegli una data'); return; } saveSettings({ op_date: v }); };
+    };
+    if (!OP) { ask(); return c; }
+    const pre = gNights.filter(n => n.date >= addDays(OP, -60) && n.date < OP), now = gNights.slice(-7);
+    const days = dayNum(today) - dayNum(OP);
+    const M = [['Sleep score', 'score', 1, ''], ['HRV', 'hrv', 1, ' ms'], ['Battito a riposo', 'rhr', -1, ' bpm'], ['Sonno profondo', 'deep', 1, ' min'], ['Body Battery', 'bb_wake', 1, ''], ['Passi', 'steps', 1, '']];
+    const rows = M.map(m => { const a = median(pre.map(n => n[m[1]])), b = median(now.map(n => n[m[1]]));
+      if (!isNum(a) || !isNum(b) || !a || !b) return '';
+      const pct = Math.round(100 * (m[2] > 0 ? b / a : a / b)), st = pct >= 97 ? 'good' : pct >= 85 ? 'warn' : 'bad';
+      const tip = `<b>${m[0]}</b><br>Prima dell'operazione: ${fmt(a)}${m[3]} (mediana dei 60 giorni prima)<br>Adesso: ${fmt(b)}${m[3]} (mediana delle ultime 7 notti)${m[2] < 0 ? '<br>Più basso è meglio' : ''}`;
+      return `<div class="rline"${tipAttr(tip)}><span>${m[0]}</span><div class="track"><i data-w="${Math.min(100, pct / 1.3).toFixed(0)}%" style="background:var(--${st})"></i><b class="mark"></b></div><span class="${st} num">${pct} %</span></div>`; }).join('');
+    const pm = MOOD.filter(m => isNum(m.pain)).sort((a, b) => a.date < b.date ? -1 : 1);
+    const painNow = avg(pm.slice(-7).map(m => m.pain));
+    c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Recupero dall'operazione</span><button class="more" id="opEdit">giorno ${days} ›</button></div>
+      <p class="small muted">Adesso rispetto al tuo normale di prima (100 % = come prima).</p>
+      ${pre.length >= 10 ? `<div class="rlines">${rows}</div><p class="hint">La tacca è il 100 %. Tocca una riga per i valori.</p>` : '<p class="empty">Servono almeno 10 notti nei 60 giorni prima dell\'operazione per il confronto.</p>'}
+      ${pm.length ? `<p class="small">Dolore: <b class="num">${fmt(painNow, 1)}</b>/10 in media ${pm.length >= 7 ? 'negli ultimi 7 check-in' : 'nei check-in fatti'}${pm.length >= 8 ? ' (all\'inizio ' + fmt(avg(pm.slice(0, 7).map(m => m.pain)), 1) + ')' : ''}.</p>` : ''}`;
+    $('#opEdit', c).onclick = e => { e.stopPropagation(); ask(); };
+    return c;
+  };
+
   // =========================================================================
   // OGGI
   // =========================================================================
@@ -687,6 +742,7 @@
     const greet = hrs < 5 ? 'Ancora sveglio?' : hrs < 13 ? 'Buongiorno!' : hrs < 18 ? 'Buon pomeriggio!' : 'Buonasera!';
     hero.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>${greet}</span>${R ? `<span class="pill ${R.score >= 80 ? 'good' : R.score >= 60 ? 'warn' : 'bad'}">${R.score >= 80 ? 'via libera' : R.score >= 60 ? 'con giudizio' : 'ai box'}</span>` : ''}</div>
       <div class="lede"><h2>${title}</h2><p>${advice}</p></div>
+      ${R ? `<p class="nightof${lastG.date === today ? '' : ' old'}">${lastG.date === today ? 'Notte appena passata' : 'Notte del ' + dLabel(lastG.date) + ' · quella di stanotte arriva quando l\'orologio sincronizza con Garmin'}</p>` : ''}
       ${R ? tachoHTML(R.score) + sectorsHTML(R.parts) : ''}`;
     v.appendChild(hero);
 
@@ -709,6 +765,7 @@
       { const dl = h('button', 'more', 'Diario: tutti i check-in ›'); dl.style.justifySelf = 'start'; dl.onclick = e => { e.stopPropagation(); buzz(); openDiary(); }; ci.appendChild(dl); }
     }
     v.appendChild(ci);
+    v.appendChild(recoveryCard());
 
     // storie: note, scoperte, tendenze
     const an = analysis(); setBadge();
@@ -1012,14 +1069,14 @@
       const c = h('section', 'card');
       c.appendChild(h('div', 'chead', '<span class="eyebrow"><i></i>Storico</span>'));
       c.appendChild(chips([['co2', 'CO2'], ['temp', 'Temperatura'], ['rh', 'Umidità']], S.hMetric, k => { S.hMetric = k; save(); rerender(); }));
-      c.appendChild(chips([[1, '24 h'], [3, '3 g'], [7, '7 g']], S.hPeriod, k => { S.hPeriod = k; save(); rerender(); }, true));
+      c.appendChild(chips([[1, '24 h'], [3, '3 g'], [7, '7 g'], [30, '30 g']], S.hPeriod, k => { S.hPeriod = k; save(); rerender(); }, true));
       const lastT = rec[rec.length - 1][0], from = lastT - S.hPeriod * 1440, r = rec.filter(p => p[0] >= from);
       const col = { co2: 1, temp: 2, rh: 3 }[S.hMetric], hcol = { temp: 4, rh: 5 }[S.hMetric];
       const unit = { co2: 'ppm', temp: '°C', rh: '%' }[S.hMetric], dec = S.hMetric === 'temp' ? 1 : 0;
-      const ticks = (a, b) => { const out = [], stepH = S.hPeriod === 1 ? 6 : S.hPeriod === 3 ? 12 : 24;
+      const ticks = (a, b) => { const out = [], stepH = S.hPeriod === 1 ? 6 : S.hPeriod === 3 ? 12 : S.hPeriod === 7 ? 24 : 24 * 7;
         for (let m2 = Math.ceil(a / (stepH * 60)) * stepH * 60; m2 <= b; m2 += stepH * 60) { const dt = absToDate(m2); out.push([m2, stepH >= 24 || dt.getUTCHours() === 0 ? dt.getUTCDate() + ' ' + MESI[dt.getUTCMonth()] : String(dt.getUTCHours()).padStart(2, '0') + ':00']); } return out; };
-      const series = [{ data: r.map(p => [p[0], p[col]]), color: S.hMetric === 'co2' ? 'var(--c-casa)' : 'var(--c-casa)', area: true, gap: 40, glow: true }];
-      if (hcol) series.push({ data: r.map(p => [p[0], p[hcol]]), color: 'var(--c-oggi)', w: 1.7, gap: 40, dash: '4 3' });
+      const series = [{ data: r.map(p => [p[0], p[col]]), color: 'var(--c-casa)', area: true, gap: S.hPeriod > 7 ? 130 : 40, glow: true }];
+      if (hcol) series.push({ data: r.map(p => [p[0], p[hcol]]), color: 'var(--c-oggi)', w: 1.7, gap: S.hPeriod > 7 ? 130 : 40, dash: '4 3' });
       const bands = S.hMetric === 'co2' ? [[800, 1000, 'var(--band-warn)'], [1000, 9999, 'var(--band-bad)']] : S.hMetric === 'temp' ? [[17, 20, 'var(--band-good)']] : [[40, 60, 'var(--band-good)']];
       lineChart(c, { h: 200, series: series, bands: bands, xTicks: ticks, tip: p => { const dt = absToDate(p[0]); const hp = hcol ? r.find(q => q[0] === p[0]) : null;
         return `${dt.getUTCDate()} ${MESI[dt.getUTCMonth()]} ${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')} · <b>${fmt(p[1], dec)}</b> ${unit}${hp && isNum(hp[hcol]) ? ' · altra stanza <b>' + fmt(hp[hcol], dec) + '</b>' : ''}`; }, aria: 'Storico ' + unit });
@@ -1066,7 +1123,7 @@
       const good = (t.dir * t.o.better) > 0, strong = t.p < 0.01 && t.strength >= 0.4;
       const c = h('section', 'card find' + (i === 0 ? ' open' : ''));
       const vmax = Math.max.apply(null, t.groups.map(g => g.v)), vmin = Math.min.apply(null, t.groups.map(g => g.v));
-      c.innerHTML = `<div class="meta"><span class="tag ${good ? 'good' : 'bad'}">${good ? 'ti aiuta' : 'ti penalizza'}</span><span class="tag n">${strong ? 'evidenza forte' : 'evidenza moderata'}</span><span class="tag n">${t.n} notti</span></div>
+      c.innerHTML = `<div class="meta"><span class="tag ${good ? 'good' : 'bad'}"${tipAttr(good ? '<b>Ti aiuta</b><br>Quando questo fattore sale, ' + esc(t.o.the) + ' migliora.' : '<b>Ti penalizza</b><br>Quando questo fattore sale, ' + esc(t.o.the) + ' peggiora.')}>${good ? 'ti aiuta' : 'ti penalizza'}</span><span class="tag n"${tipAttr(strong ? '<b>Evidenza forte</b><br>Il legame è netto e c\'è meno di 1 probabilità su 100 che sia un caso.' : '<b>Evidenza moderata</b><br>Il legame c\'è ma è meno netto, oppure le notti sono ancora poche. Può cambiare con più dati.')}>${strong ? 'evidenza forte' : 'evidenza moderata'}</span><span class="tag n"${tipAttr('<b>' + t.n + ' notti</b> con entrambi i dati. Le barre confrontano i gruppi di notti: il numero sotto ogni barra è quante notti ci sono nel gruppo.')}>${t.n} notti</span></div>
         <h3>${esc(findingTitle(t))}</h3><div class="bars" style="grid-template-columns:repeat(${t.groups.length},minmax(0,1fr))">${t.groups.map(g => `<div class="bar ${g.hi ? '' : 'dim'}"><span class="v" style="font-size:.9rem;color:var(--fg)">${fmt(g.v, t.o.dec)}</span><div class="col" style="height:72px"><div class="fill" data-hgt="${(25 + 75 * (g.v - vmin) / ((vmax - vmin) || 1)).toFixed(0)}%"></div></div><span class="k">${esc(g.k)} · ${g.n}</span></div>`).join('')}</div>
         <div class="body"><p class="muted small">${esc(findingBody(t))}</p><div class="sc"></div></div><span class="more">${i === 0 ? 'Chiudi' : 'Vedi i dati'}</span>`;
       const sc = c.querySelector('.sc'); let drawn = false;
