@@ -21,8 +21,24 @@ const E_JOBS = [
 
 // Operazioni una tantum: girano una volta sola, al primo giro utile, una per giro.
 const E_MIGRATIONS = [
-  { id: '2026-11-17-attivita-3-anni', fn: 'garminActivitiesBackfill' }
+  { id: '2026-11-17-attivita-3-anni', fn: 'garminActivitiesBackfill' },
+  { id: '2026-11-18-storico-garmin', fn: 'eBackfillGarmin_' },   // per una nuova installazione: 90 notti
+  { id: '2026-11-18-storico-renpho', fn: 'eBackfillRenpho_' }    // e tutte le pesate (no-op se ci sono già)
 ];
+
+/** Storico Garmin solo se la scheda è quasi vuota (nuova installazione). */
+function eBackfillGarmin_() {
+  const sh = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID')).getSheetByName(GARMIN_TAB);
+  if (!sh || sh.getLastRow() < 30) garminBackfill();
+}
+
+/** Storico Renpho solo se ci sono le credenziali e la scheda è quasi vuota. */
+function eBackfillRenpho_() {
+  const p = PropertiesService.getScriptProperties();
+  if (!p.getProperty('RENPHO_EMAIL')) return;
+  const sh = SpreadsheetApp.openById(p.getProperty('SHEET_ID')).getSheetByName(RENPHO_TAB);
+  if (!sh || sh.getLastRow() < 5) renphoBackfill();
+}
 
 function ritmoEngineTick_() {
   const p = PropertiesService.getScriptProperties();

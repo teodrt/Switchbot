@@ -25,7 +25,7 @@ const DATA = <?!= json ?>;
    Per cambiare la grafica basta un commit su main: niente da incollare, niente deployment. */
 (function () {
   var REPO = 'teodrt/Switchbot', CDN = 'https://cdn.jsdelivr.net/gh/' + REPO + '@';
-  var BRANCH = <?!= JSON.stringify(typeof branch === 'undefined' ? 'main' : branch) ?>;   // "main" o "stabile" (proprietà RITMO_BRANCH)
+  var BRANCH = <?!= JSON.stringify(typeof branch === 'undefined' ? 'main' : branch) ?>;   // "main" o il ramo della persona (proprietà RITMO_BRANCH)
   var started = false;
   function fail() {
     var b = document.getElementById('boot');

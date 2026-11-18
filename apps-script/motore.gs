@@ -3,7 +3,7 @@
  *
  * È l'unico file di codice del progetto Apps Script, insieme alla pagina HTML "ritmo".
  * NON va più modificato: a ogni esecuzione scarica da GitHub (ramo main del repo teodrt/Switchbot,
- * oppure il ramo scritto nella proprietà RITMO_BRANCH, es. "stabile")
+ * oppure il ramo scritto nella proprietà RITMO_BRANCH, es. "p2" per la seconda persona)
  * i file elencati in apps-script/engine.json, li controlla e li esegue. Così ogni modifica al
  * codice arriva da sola. Se GitHub non risponde o il codice nuovo ha un errore di sintassi,
  * usa l'ultima versione buona salvata nelle proprietà dello script.
@@ -13,8 +13,10 @@
  * Installazione (una volta sola): incolla questo file come "Motore", salva, esegui ritmoInstall.
  */
 
-var RITMO_SRC = 'https://raw.githubusercontent.com/teodrt/Switchbot/' +
-  (PropertiesService.getScriptProperties().getProperty('RITMO_BRANCH') || 'main') + '/apps-script/';
+function ritmoSrc_() {
+  return 'https://raw.githubusercontent.com/teodrt/Switchbot/' +
+    (PropertiesService.getScriptProperties().getProperty('RITMO_BRANCH') || 'main') + '/apps-script/';
+}
 var RITMO_CACHE_SEC = 900;      // il codice scaricato vale 15 minuti
 var RITMO_CHUNK_CACHE = 90000;  // CacheService: massimo 100 KB per valore
 var RITMO_CHUNK_PROP = 4000;    // proprietà: massimo 9 KB per valore (lettere accentate = 2 byte)
@@ -23,12 +25,59 @@ var ritmoLoaded_ = false;
 // ---- punti di ingresso fissi (trigger, web app, chiamate dall'app) ----
 function doGet(e) { return ritmoCall_('doGet', [e]); }
 function ritmoSaveCheckin(c) { return ritmoCall_('ritmoSaveCheckin', [c]); }
+
+// ---- installazione da foglio modello: menu "Ritmo → Configura" (solo se lo script è dentro un foglio) ----
+function onOpen() {
+  try { SpreadsheetApp.getUi().createMenu('Ritmo').addItem('Configura', 'ritmoSetupDialog').addToUi(); } catch (e) {}
+}
+
+function ritmoSetupDialog() {
+  var p = PropertiesService.getScriptProperties();
+  var has = function (k) { return p.getProperty(k) ? ' (già salvata: lascia vuoto per non cambiarla)' : ''; };
+  var html = '<style>body{font:14px system-ui,sans-serif;color:#1b1d24;margin:0;padding:4px 2px}label{display:block;margin:12px 0 4px;font-weight:600}' +
+    'input{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #cfd3dc;border-radius:8px;font:inherit}small{color:#5a5f6e}' +
+    'button{margin-top:16px;width:100%;padding:12px;border:0;border-radius:10px;background:#e8591c;color:#fff;font:600 15px system-ui;cursor:pointer}' +
+    'ol{padding-left:18px}li{margin:6px 0}#done{display:none}#err{color:#c62f2f;margin-top:10px}</style>' +
+    '<div id="form"><p>Inserisci le tue chiavi. Restano solo nel tuo script, nessuno le vede.</p>' +
+    '<label>Chiave Garmin (Personal API)</label><input id="g" type="password" autocomplete="off"><small>' + has('GARMIN_API_KEY') + '</small>' +
+    '<label>Email del secondo account Renpho</label><input id="re" type="email" autocomplete="off"><small>' + has('RENPHO_EMAIL') + '</small>' +
+    '<label>Password del secondo account Renpho</label><input id="rp" type="password" autocomplete="off"><small>' + has('RENPHO_PASSWORD') + '</small>' +
+    '<button id="go">Configura Ritmo</button><div id="err"></div></div>' +
+    '<div id="done"><p><b>Fatto.</b> Ritmo lavora da solo: nei prossimi minuti importa sonno e pesate degli ultimi mesi.</p>' +
+    '<p>Ultimo passo, per avere l\'app sul telefono:</p><ol><li>Menu <b>Estensioni → Apps Script</b>.</li>' +
+    '<li>In alto a destra <b>Esegui il deployment → Nuovo deployment</b>, tipo <b>App web</b>, esegui come <b>Me</b>, accesso <b>Solo io</b>, poi <b>Esegui il deployment</b>.</li>' +
+    '<li><b>Esegui il deployment → Testa i deployment</b>: copia il link che finisce con <b>/dev</b>, aprilo sul telefono e aggiungilo alla schermata Home.</li></ol></div>' +
+    '<script>document.getElementById("go").onclick=function(){var b=this;b.disabled=true;b.textContent="Configuro... (un minuto)";' +
+    'google.script.run.withSuccessHandler(function(){document.getElementById("form").style.display="none";document.getElementById("done").style.display="block";})' +
+    '.withFailureHandler(function(e){b.disabled=false;b.textContent="Configura Ritmo";document.getElementById("err").textContent=e.message;})' +
+    '.ritmoSetupSave({g:document.getElementById("g").value.trim(),re:document.getElementById("re").value.trim(),rp:document.getElementById("rp").value});};</script>';
+  SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutput(html).setWidth(440).setHeight(520), 'Ritmo · configurazione');
+}
+
+/** Salva le chiavi, legge la scheda "Configurazione" del modello (ramo, foglio dell'aria) e avvia il motore. */
+function ritmoSetupSave(f) {
+  var p = PropertiesService.getScriptProperties(), ss = SpreadsheetApp.getActiveSpreadsheet();
+  p.setProperty('SHEET_ID', ss.getId());
+  if (f && f.g) p.setProperty('GARMIN_API_KEY', f.g);
+  if (f && f.re) p.setProperty('RENPHO_EMAIL', f.re);
+  if (f && f.rp) p.setProperty('RENPHO_PASSWORD', f.rp);
+  var cfg = ss.getSheetByName('Configurazione');
+  if (cfg) cfg.getDataRange().getValues().forEach(function (r) {
+    var k = String(r[0]).trim(), v = String(r[1]).trim();
+    if (k === 'ramo' && /^[\w.-]+$/.test(v)) p.setProperty('RITMO_BRANCH', v);
+    if (k === 'aria' && /^[\w-]{20,}$/.test(v)) p.setProperty('AIR_SOURCE_ID', v);
+  });
+  if (!p.getProperty('GARMIN_API_KEY')) throw new Error('Manca la chiave Garmin.');
+  ritmoInstall();
+  return true;
+}
 function ritmoTick() { return ritmoCall_('ritmoEngineTick_', []); }
-doGet.ritmoBoot = true; ritmoSaveCheckin.ritmoBoot = true;
+doGet.ritmoBoot = true; ritmoSaveCheckin.ritmoBoot = true; onOpen.ritmoBoot = true;
 
 /** Da eseguire una volta a mano: credenziali, trigger, primo giro del motore. */
 function ritmoInstall() {
   var p = PropertiesService.getScriptProperties();
+  try { if (!p.getProperty('SHEET_ID') && SpreadsheetApp.getActiveSpreadsheet()) p.setProperty('SHEET_ID', SpreadsheetApp.getActiveSpreadsheet().getId()); } catch (e) {}
   // Credenziali SwitchBot dal vecchio file "Codice", se c'è ancora (prima di cancellarlo).
   try { if (typeof TOKEN !== 'undefined' && TOKEN && !p.getProperty('SWITCHBOT_TOKEN')) p.setProperty('SWITCHBOT_TOKEN', TOKEN); } catch (e) {}
   try { if (typeof SECRET !== 'undefined' && SECRET && !p.getProperty('SWITCHBOT_SECRET')) p.setProperty('SWITCHBOT_SECRET', SECRET); } catch (e) {}
@@ -89,8 +138,9 @@ function ritmoSource_() {
 }
 
 function ritmoFetch_() {
-  var list = JSON.parse(UrlFetchApp.fetch(RITMO_SRC + 'engine.json', { muteHttpExceptions: false }).getContentText()).files;
-  var res = UrlFetchApp.fetchAll(list.map(function (f) { return { url: RITMO_SRC + f, muteHttpExceptions: true }; }));
+  var SRC = ritmoSrc_();
+  var list = JSON.parse(UrlFetchApp.fetch(SRC + 'engine.json', { muteHttpExceptions: false }).getContentText()).files;
+  var res = UrlFetchApp.fetchAll(list.map(function (f) { return { url: SRC + f, muteHttpExceptions: true }; }));
   return res.map(function (r, i) {
     if (r.getResponseCode() !== 200) throw new Error(list[i] + ' HTTP ' + r.getResponseCode());
     return '\n// ===== ' + list[i] + ' =====\n' + r.getContentText();
