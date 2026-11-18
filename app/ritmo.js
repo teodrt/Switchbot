@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '18 nov 2026 · v5.3';
+  const RELEASE = '18 nov 2026 · v5.3.1';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -498,10 +498,9 @@
       row.style.setProperty('--j', j);
       let bar = '';
       if (b !== null && e !== null && e > b) {
-        const st = [['deep', '--st-deep'], ['light', '--st-light'], ['rem', '--st-rem'], ['awake', '--st-awake']].filter(k => n[k[0]] > 0);
-        bar = `<div class="tlbar" style="left:${x(clamp(b, T0, T1))};width:calc(${x(clamp(e, T0, T1))} - ${x(clamp(b, T0, T1))});--j:${j}">${st.map(k => `<i style="flex:${n[k[0]]};background:var(${k[1]})"></i>`).join('')}</div>`;
+        const st = PH.filter(k => n[k[0]] > 0);
+        bar = `<div class="tlbar" style="left:${x(clamp(b, T0, T1))};width:calc(${x(clamp(e, T0, T1))} - ${x(clamp(b, T0, T1))});--j:${j}">${st.map(k => `<i style="flex:${n[k[0]]};background:var(${k[2]})"${tipAttr(`<span class="tk"><i style="background:var(${k[2]})"></i><b>${k[1]}</b></span>`)}></i>`).join('')}</div>`;
       }
-      row.dataset.tip = nightTip(n);
       row.innerHTML = `<span class="d"><b>${GG[dow(n.date)]}</b>${+n.date.slice(8, 10)}</span><div class="tltrack">${bar}</div><span class="sc" style="color:${scoreColor(n.score)}">${isNum(n.score) ? n.score : '-'}</span>`;
       row.onclick = () => { buzz(); onPick(n.date); };
       box.appendChild(row);
@@ -573,6 +572,14 @@
         ${m.note ? `<span class="dn">“${esc(m.note)}”</span>` : ''}</button>`
     : `<button class="drow miss" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span><span class="dv faint">nessun check-in · <span class="more">aggiungi +</span></span></button>`;
   const bindDiary = el => el.querySelectorAll('.drow').forEach(b => { b.onclick = e => { e.stopPropagation(); buzz(); openCheckin(null, b.dataset.day); }; });
+  const diaryDays = all => { const MB = moodBy(), last7 = [...Array(7)].map((_, i) => addDays(today, -i));
+    const older = MOOD.map(m => m.date).filter(d => d < last7[6]).sort().reverse(); return { MB: MB, last7: last7, older: older, days: all ? last7.concat(older) : last7 }; };
+  const openDiary = () => sheet((box, close) => {
+    paint(box, 'insight'); const D = diaryDays(true);
+    box.innerHTML = `<div><span class="eyebrow"><i></i>Diario</span><h2 style="margin-top:6px">I tuoi check-in</h2><p class="muted small" style="margin-top:4px">${MOOD.length} check-in. Tocca un giorno per modificarlo o aggiungerne uno dimenticato.</p></div>
+      <div class="diary">${D.days.map(d => diaryRow(d, D.MB[d])).join('')}</div>`;
+    box.querySelectorAll('.drow').forEach(b => { b.onclick = () => { buzz(); close(); setTimeout(() => openCheckin(null, b.dataset.day), 350); }; });
+  });
   const todayMood = () => MOOD.find(m => m.date === today) || null;
   const openCheckin = (pre, day) => sheet((box, close) => {
     day = day || today; const isToday = day === today;
@@ -693,11 +700,13 @@
       ENERGY.forEach((l, i) => { const b = h('button', '', `<b>${i + 1}</b>${l}`); b.onclick = e => { e.stopPropagation(); buzz(); openCheckin({ energy: i + 1 }); }; sc.appendChild(b); });
       ci.appendChild(sc);
       ci.onclick = () => openCheckin();
+      { const dl = h('button', 'more', 'Diario: tutti i check-in ›'); dl.style.justifySelf = 'start'; dl.onclick = e => { e.stopPropagation(); buzz(); openDiary(); }; ci.appendChild(dl); }
     } else {
       ci.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Check-in di oggi</span><span class="more">Modifica ›</span></div>
         <div class="grid3">${stat('Energia', fmt(tm.energy), '/5', ENERGY[(tm.energy || 3) - 1], tm.energy >= 4 ? 'good' : tm.energy >= 3 ? 'warn' : 'bad')}${stat('Umore', fmt(tm.mood), '/5', MOODL[(tm.mood || 3) - 1], tm.mood >= 4 ? 'good' : tm.mood >= 3 ? 'warn' : 'bad')}${stat('Dolore', fmt(tm.pain), '/10', tm.pain <= 2 ? 'basso' : tm.pain <= 5 ? 'medio' : 'alto', tm.pain <= 2 ? 'good' : tm.pain <= 5 ? 'warn' : 'bad')}</div>
         ${tm.note ? `<p class="small muted">“${esc(tm.note)}”</p>` : ''}`;
       ci.onclick = () => openCheckin();
+      { const dl = h('button', 'more', 'Diario: tutti i check-in ›'); dl.style.justifySelf = 'start'; dl.onclick = e => { e.stopPropagation(); buzz(); openDiary(); }; ci.appendChild(dl); }
     }
     v.appendChild(ci);
 

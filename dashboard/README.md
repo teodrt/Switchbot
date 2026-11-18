@@ -12,7 +12,8 @@ check-in, Insight dal pulsante in alto a destra. Ogni sezione ha un suo colore. 
 linee si scorrono col dito; toccare un punto che è una notte apre quella notte. Dettagli (check-in,
 attività, settimana) in schede che salgono dal basso. Sezione e filtri restano in `localStorage`.
 
-1. **Oggi**: contagiri del recupero e 4 settori (sonno, HRV, riposo, energia) con il valore vero e lo scarto dalla media, check-in, carosello
+1. **Oggi**: contagiri del recupero e 4 settori (sonno, HRV, riposo, energia) con il valore vero e lo scarto dalla media, check-in
+   (con "Diario: tutti i check-in" che apre lo storico), carosello
    "Per te oggi" (note della notte, tendenze, scoperte), timeline delle ultime 7 notti, casa (CO2 su
    semicerchio), sport degli ultimi 7 giorni, corpo con peso a 6 mesi, "La tua settimana", recupero a 30 giorni.
 2. **Sonno**: navigazione tra le notti (frecce e swipe), anello, fasi rispetto al solito, HRV, riposo,
@@ -26,7 +27,7 @@ attività, settimana) in schede che salgono dal basso. Sezione e filtri restano 
    modificarlo o aggiungerlo), scoperte filtrabili (anche energia, umore, dolore), grafico a punti, andamento di
    energia e umore, tendenze, cosa sta ancora imparando, metodo.
 
-Spiegazioni: ogni elemento grafico che non è ovvio (righe della timeline, fasi del sonno, calendario,
+Spiegazioni: ogni elemento grafico che non è ovvio (colori della timeline: solo il nome della fase, fasi del sonno, calendario,
 barre dello sport, settori e contagiri) ha un fumetto. Col mouse compare al passaggio; col dito il primo
 tocco mostra il fumetto e il secondo fa l'azione (es. apre la notte). "‹ Oggi" e il logo riportano a Oggi.
 
