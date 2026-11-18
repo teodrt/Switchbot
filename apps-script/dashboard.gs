@@ -37,7 +37,8 @@ function nData_() {
 
 const N_MOOD_TAB = 'Umore';
 const N_MOOD_HEADER = ['date', 'time', 'energy', 'mood', 'pain', 'note', 'tags'];
-const N_TAGS = ['fisio'];   // caselle del check-in (cosa hai fatto ieri)
+const N_TAGS = ['fisio', 'antidolorifico', 'alcol', 'caffe', 'cena', 'finestra'];   // caselle del check-in (ieri e stanotte)
+const N_EXPS = ['temp', 'co2', 'bed', 'caffe'];   // esperimenti di 7 notti che l'app sa misurare
 
 /** Impostazioni dell'utente salvate dall'app (es. data dell'operazione): proprietà APP_SETTINGS, mai nel repo. */
 function nSettings_() {
@@ -83,10 +84,13 @@ function ritmoSaveCheckin(c) {
       ref: String(c.ref || '').slice(0, 12), view: String(c.view || '').slice(0, 20), w: Number(c.w) || null }));
     return { ok: true };
   }
-  // Impostazioni dall'app (nessun dato nel foglio): per ora solo la data dell'operazione.
+  // Impostazioni dall'app (nessun dato nel foglio): data dell'operazione ed esperimenti.
   if (c && c.settings) {
-    const st = nSettings_(), op = String(c.settings.op_date || '');
-    if (/^\d{4}-\d{2}-\d{2}$/.test(op)) st.op_date = op; else if (op === '') delete st.op_date;
+    const st = nSettings_(), s = c.settings, isDay = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+    if ('op_date' in s) { if (isDay(s.op_date)) st.op_date = s.op_date; else delete st.op_date; }
+    if (s.exp_start && N_EXPS.indexOf(s.exp_start.id) >= 0 && isDay(s.exp_start.start))
+      st.exps = (st.exps || []).filter(e => e.start !== s.exp_start.start).concat([{ id: s.exp_start.id, start: s.exp_start.start }]).slice(-12);
+    if (s.exp_stop && isDay(s.exp_stop)) st.exps = (st.exps || []).map(e => e.start === s.exp_stop && !e.stop ? { id: e.id, start: e.start, stop: Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd') } : e);
     PropertiesService.getScriptProperties().setProperty('APP_SETTINGS', JSON.stringify(st));
     return st;
   }
