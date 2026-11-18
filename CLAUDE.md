@@ -150,3 +150,4 @@ docs/schema-foglio.md     schede e colonne del foglio hub
    scheda `Attivita`, carico 7 g contro 28 g, VO2 max), report settimanale via email e in app,
    interfaccia rifatta (colori per sezione, timeline del sonno, schede dal basso, carosello di insight).
 8. v3.1 (17/11/2026): motore auto-aggiornante, nessun file da incollare dopo l'installazione.
+9. v5 (18/11/2026): interfaccia "pit wall" (scura, vetro, contagiri del recupero, settori stile F1).
