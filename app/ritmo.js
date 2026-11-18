@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '18 nov 2026 · v5.4.1';
+  const RELEASE = '18 nov 2026 · v5.5';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -58,6 +58,14 @@
   const hm = hrs => { if (!isNum(hrs)) return '-'; const m = Math.round(hrs * 60); return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0'); };
   const clock = m => { let x = Math.round(m); x = ((x % 1440) + 1440) % 1440; return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); };
   const bedMin = s => { if (!/^\d{2}:\d{2}$/.test(s || '')) return null; const m = +s.slice(0, 2) * 60 + +s.slice(3, 5); return m >= 720 ? m - 1440 : m; };
+  // Caselle del check-in: cosa hai fatto ieri e stanotte (si collegano alla notte appena passata).
+  const TAGS = [['fisio', 'Fisio', 'fisioterapia del giorno prima', 'dopo la fisio', 'senza fisio', 'Dopo la fisioterapia'],
+    ['antidolorifico', 'Antidolorifico', 'antidolorifico', 'con antidolorifico', 'senza', 'Con l\'antidolorifico'],
+    ['alcol', 'Alcol', 'alcol la sera prima', 'dopo alcol', 'senza alcol', 'Dopo aver bevuto alcol'],
+    ['caffe', 'Caffè dopo le 15', 'caffè dopo le 15', 'caffè tardi', 'senza', 'Con il caffè dopo le 15'],
+    ['cena', 'Cena tardi', 'cena tardi', 'cena tardi', 'cena presto', 'Dopo una cena tardi'],
+    ['finestra', 'Finestra aperta', 'finestra aperta di notte', 'finestra aperta', 'chiusa', 'Con la finestra aperta']];
+  const tagName = k => (TAGS.find(t => t[0] === k) || [k, k])[1];
   const absToDate = m => new Date(m * 60000);
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const raf2 = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
@@ -178,7 +186,7 @@
       { id: 'rh', label: 'umidità della camera', axis: 'umidità camera (%)', get: n => n.air ? n.air.rh_avg : null, show: v => fmt(v) + ' %', room: true, when: 'Con aria più umida', hiP: v => 'l\'umidità è almeno al ' + fmt(v) + ' %', loP: v => 'è al massimo al ' + fmt(v) + ' %' },
       { id: 'sscore', label: 'sleep score della notte', axis: 'sleep score della notte', get: n => n.score, show: v => fmt(v), only: MOODO, when: 'Dopo notti migliori', hiP: v => 'lo sleep score è almeno ' + fmt(v), loP: v => 'è al massimo ' + fmt(v) },
       { id: 'shrv', label: 'HRV della notte', axis: 'HRV della notte (ms)', get: n => n.hrv, show: v => fmt(v) + ' ms', only: MOODO, when: 'Con HRV più alta', hiP: v => 'l\'HRV è almeno ' + fmt(v) + ' ms', loP: v => 'è al massimo ' + fmt(v) + ' ms' },
-      { id: 'fisio', label: 'fisioterapia del giorno prima', get: n => MB[n.date] ? ((MB[n.date].tags || []).indexOf('fisio') >= 0 ? 1 : 0) : null, binary: true, hiName: 'dopo la fisio', loName: 'senza fisio', when: 'Dopo la fisioterapia' },
+      ...TAGS.map(t => ({ id: 'tag_' + t[0], label: t[2], get: n => MB[n.date] ? ((MB[n.date].tags || []).indexOf(t[0]) >= 0 ? 1 : 0) : null, binary: true, hiName: t[3], loName: t[4], when: t[5] })),
       { id: 'weekend', label: 'notti del weekend', get: n => { const w = dow(n.date); return w === 6 || w === 0 ? 1 : 0; }, binary: true, hiName: 'weekend', loName: 'in settimana', when: 'Nel weekend' }
     ];
     const OUTCOMES = [
@@ -423,7 +431,7 @@
       <text x="20" y="116" text-anchor="middle">400</text><text x="180" y="116" text-anchor="middle">1600</text></svg>`;
   };
   // Contagiri del recupero: arco di 240 gradi con tacche ogni 10, lancetta e numero in corsivo.
-  const tachoHTML = score => {
+  const tachoHTML = (score, when) => {
     const cx = 120, cy = 120, R = 96, A0 = 150, SW = 240, v = isNum(score) ? clamp(score, 0, 100) : 0;
     const pt = (f, r) => { const a = (A0 + f * SW) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
     const arcD = (f0, f1, r) => { const p0 = pt(f0, r), p1 = pt(f1, r); return `M${p0[0].toFixed(1)},${p0[1].toFixed(1)} A${r},${r} 0 ${(f1 - f0) * SW > 180 ? 1 : 0} 1 ${p1[0].toFixed(1)},${p1[1].toFixed(1)}`; };
@@ -440,7 +448,7 @@
       <g class="needle" style="transform:rotate(${A0 + 90}deg)" data-rot="${ang.toFixed(1)}"><line x1="${cx}" y1="${cy + 14}" x2="${cx}" y2="${cy - tip}" stroke="#ff6a2b" stroke-width="2.4" stroke-linecap="round" style="filter:drop-shadow(0 0 6px #ff6a2b)"/></g>
       <circle cx="${cx}" cy="${cy}" r="6" fill="var(--hole)" stroke="#ff6a2b" stroke-width="2"/>
       <text class="tn" x="${cx}" y="${cy + 46}" text-anchor="middle" data-count="${isNum(score) ? score : ''}">${isNum(score) ? '0' : '-'}</text>
-      <text class="tl" x="${cx}" y="${cy + 62}" text-anchor="middle">RECUPERO / 100</text></svg>`;
+      <text class="tl" x="${cx}" y="${cy + 62}" text-anchor="middle">RECUPERO / 100${when ? ' · ' + esc(when).toUpperCase() : ''}</text></svg>`;
   };
   // Settori come nei tempi di F1: viola = ottimo, verde = buono, giallo = sotto.
   const secCol = p => p.odd ? 'var(--warn)' : p.v >= 90 ? 'var(--purple)' : p.v >= 70 ? 'var(--good)' : 'var(--warn)';
@@ -569,7 +577,7 @@
   const moodLevel = (v, hi) => !isNum(v) ? '' : hi ? (v >= 4 ? 'good' : v >= 3 ? 'warn' : 'bad') : (v <= 2 ? 'good' : v <= 5 ? 'warn' : 'bad');
   const diaryRow = (d, m) => m
     ? `<button class="drow" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span>
-        <span class="dv"><span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span><span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span><span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span>${(m.tags || []).indexOf('fisio') >= 0 ? '<span class="pill">fisio ieri</span>' : ''}</span>
+        <span class="dv"><span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span><span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span><span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span>${(m.tags || []).map(t => '<span class="pill">' + esc(tagName(t)) + '</span>').join('')}</span>
         ${m.note ? `<span class="dn">“${esc(m.note)}”</span>` : ''}</button>`
     : `<button class="drow miss" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span><span class="dv faint">nessun check-in · <span class="more">aggiungi +</span></span></button>`;
   const bindDiary = el => el.querySelectorAll('.drow').forEach(b => { b.onclick = e => { e.stopPropagation(); buzz(); openCheckin(null, b.dataset.day); }; });
@@ -604,9 +612,9 @@
     const note = h('div', '', '<span class="eyebrow" style="margin-bottom:8px">Nota (facoltativa)</span>'); note.style.display = 'grid'; note.style.gap = '8px';
     const ta = h('textarea'); ta.id = 'cinote'; ta.placeholder = 'Es. fisioterapia, dormito male, giornata pesante'; ta.maxLength = 280; ta.value = cur.note || ''; note.appendChild(ta); box.appendChild(note);
     cur.tags = (cur.tags || []).slice();
-    const tg = h('div', '', `<span class="eyebrow" style="margin-bottom:8px">${isToday ? 'Ieri' : 'Il giorno prima'}</span>`); tg.style.display = 'grid'; tg.style.gap = '8px';
+    const tg = h('div', '', `<span class="eyebrow" style="margin-bottom:8px">${isToday ? 'Ieri e stanotte' : 'Il giorno prima e la notte'}</span>`); tg.style.display = 'grid'; tg.style.gap = '8px';
     const tgc = h('div', 'fchips');
-    [['fisio', 'Ho fatto fisio']].forEach(t => { const b = h('button', 'chip', t[1]); b.setAttribute('aria-pressed', String(cur.tags.indexOf(t[0]) >= 0));
+    TAGS.forEach(t => { const b = h('button', 'chip', t[1]); b.setAttribute('aria-pressed', String(cur.tags.indexOf(t[0]) >= 0));
       b.onclick = () => { buzz(); const i = cur.tags.indexOf(t[0]); if (i >= 0) cur.tags.splice(i, 1); else cur.tags.push(t[0]); b.setAttribute('aria-pressed', String(i < 0)); }; tgc.appendChild(b); });
     tg.appendChild(tgc); box.insertBefore(tg, note);
     const save = h('button', 'btn', icon('check') + 'Salva');
@@ -728,6 +736,66 @@
     return c;
   };
 
+  // Esperimenti di 7 notti: una regola, l'app controlla da sola se l'hai rispettata e confronta
+  // le notti rispettate con le 14 notti prima dell'inizio. Elenco salvato in APP_SETTINGS.exps.
+  const EXPS = {
+    temp: { t: 'Camera sotto i 20 °C', how: 'Prima di dormire abbassa il riscaldamento o arieggia: la camera deve restare sotto i 20 °C.', ok: n => n.air && isNum(n.air.temp_avg) ? n.air.temp_avg <= 20 : null, auto: 'temperatura media della notte dal sensore' },
+    co2: { t: 'Aria fresca: CO2 sotto 800', how: 'Socchiudi la finestra o la porta: la CO2 media della notte deve restare sotto 800 ppm.', ok: n => n.air && isNum(n.air.co2_avg) ? n.air.co2_avg < 800 : null, auto: 'CO2 media della notte dal sensore' },
+    bed: { t: 'A dormire entro le 23', how: 'Spegni la luce in tempo per addormentarti entro le 23:00.', ok: n => bedMin(n.bed_start) !== null ? bedMin(n.bed_start) <= -60 : null, auto: 'ora in cui ti addormenti, da Garmin' },
+    caffe: { t: 'Niente caffè dopo le 15', how: 'Ultimo caffè entro le 15. Se sgarri, segnalo nel check-in del mattino.', ok: n => moodBy()[n.date] ? (moodBy()[n.date].tags || []).indexOf('caffe') < 0 : null, auto: 'casella "Caffè dopo le 15" del check-in' }
+  };
+  const EXP_M = [['Sonno profondo', n => n.deep, ' min', 1, 0], ['Sleep score', n => n.score, '', 1, 0], ['HRV', n => n.hrv, ' ms', 1, 0], ['Battito a riposo', n => n.rhr, ' bpm', -1, 0],
+    ['Body Battery', n => n.bb_wake, '', 1, 0], ['Dolore al mattino', n => moodBy()[n.date] ? moodBy()[n.date].pain : null, '/10', -1, 1]];
+  const expList = () => (SETTINGS.exps || []).filter(e => EXPS[e.id]);
+  const expState = e => { const k = Math.min(7, dayNum(today) - dayNum(e.start)), end = e.stop || addDays(e.start, 7);
+    const ns = nights.filter(n => n.date > e.start && n.date <= addDays(e.start, 7) && n.date <= end);
+    const marks = ns.map(n => ({ date: n.date, ok: EXPS[e.id].ok(n) }));
+    const done = !!e.stop || k >= 7;
+    const base = gNights.filter(n => n.date <= e.start && n.date > addDays(e.start, -14));
+    const kept = ns.filter(n => EXPS[e.id].ok(n) === true && isNum(n.score));
+    const res = EXP_M.map(m => { const a = avg(base.map(m[1]).filter(isNum)), b = avg(kept.map(m[1]).filter(isNum)); return { m: m, a: a, b: b, d: isNum(a) && isNum(b) ? b - a : null }; });
+    return { e: e, x: EXPS[e.id], night: Math.max(0, k), done: done, marks: marks, kept: kept.length, res: res, base: base.length }; };
+  const activeExp = () => { const l = expList(); const e = l[l.length - 1]; if (!e) return null; const st = expState(e); return st.done ? null : st; };
+  const expMarks = st => `<div class="xmarks">${[...Array(7)].map((_, i) => { const d = addDays(st.e.start, i + 1), m = st.marks.find(x => x.date === d);
+    const cls = !m ? (d <= today ? 'wait' : '') : m.ok === true ? 'ok' : m.ok === false ? 'no' : 'wait';
+    return `<i class="${cls}"${tipAttr('<b>Notte ' + (i + 1) + '</b> · ' + cap(GIORNI[dow(d)]) + ' ' + dLabel(d) + '<br>' + (cls === 'ok' ? 'rispettata' : cls === 'no' ? 'non rispettata' : d <= today ? 'dati non ancora arrivati' : 'ancora da fare'))}></i>`; }).join('')}</div>`;
+  const expResult = st => st.kept < 3 ? `<p class="small muted">Notti rispettate: ${st.kept} su 7. Ne servono almeno 3 per un confronto.</p>`
+    : `<p class="small">Notti rispettate: <b>${st.kept}</b> su 7, confrontate con le ${st.base} notti prima dell'esperimento.</p><div class="xres">${st.res.filter(r => isNum(r.d)).map(r => {
+        const good = r.d * r.m[3] > 0, tiny = Math.abs(r.d) < (r.m[4] ? .3 : r.m[2] === ' min' ? 5 : 2);
+        return `<div><span>${r.m[0]}</span><span class="num muted">${fmt(r.a, r.m[4])} → ${fmt(r.b, r.m[4])}${r.m[2]}</span><b class="num ${tiny ? 'faint' : good ? 'good' : 'bad'}">${r.d > 0 ? '+' : ''}${fmt(r.d, r.m[4])}</b></div>`; }).join('')}</div>
+      <p class="hint">7 notti sono poche: prendilo come un indizio forte, non una certezza. Ripetere l'esperimento lo conferma.</p>`;
+  const startExp = id => { saveSettings({ exp_start: { id: id, start: today } }); };
+  const expCard = () => {
+    const c = h('section', 'card'); paint(c, 'insight');
+    const st = activeExp(), past = expList().map(expState).filter(x => x.done).reverse();
+    if (st) {
+      c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Esperimento in corso</span><span class="muted small">notte ${Math.min(7, st.night + 1)} di 7</span></div>
+        <h3>${st.x.t}</h3><p class="small">${st.x.how}</p>${expMarks(st)}<p class="hint">Controllo automatico: ${st.x.auto}.</p>
+        ${st.kept >= 3 ? '<span class="eyebrow">Come sta andando</span>' + expResult(st) : ''}<button class="more" id="xStop">Interrompi l'esperimento</button>`;
+      $('#xStop', c).onclick = () => { buzz(); saveSettings({ exp_stop: st.e.start }); };
+    } else {
+      c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Esperimenti di 7 notti</span></div>
+        <p class="small muted">Il modo più rapido per capire cosa ti fa dormire meglio: una regola per 7 notti, Ritmo controlla da solo e confronta con le notti prima.</p>
+        <div class="xlist">${Object.keys(EXPS).map(k => `<div class="xitem"><div><b>${EXPS[k].t}</b><p class="small muted">${EXPS[k].how}</p></div><button class="chip" data-x="${k}">Inizia</button></div>`).join('')}</div>`;
+      c.querySelectorAll('[data-x]').forEach(b => { b.onclick = () => { buzz(); startExp(b.dataset.x); }; });
+    }
+    past.slice(0, 3).forEach(p => { c.insertAdjacentHTML('beforeend', `<div class="xpast"><span class="eyebrow">${p.x.t} · dal ${dLabel(p.e.start)}</span>${expResult(p)}</div>`); });
+    return c;
+  };
+  // Stasera: un consiglio solo, dall'esperimento in corso o dalla camera in questo momento.
+  const tonightCard = () => {
+    const st = activeExp(), rm = DATA.room, c = h('section', 'card color'); paint(c, 'sonno');
+    let t = '', why = '', exp = null;
+    if (st) { t = st.x.how; why = 'Esperimento "' + st.x.t + '", notte ' + Math.min(7, st.night + 1) + ' di 7.'; }
+    else if (rm && isNum(rm.temp) && rm.temp > 20.5) { t = 'Camera a ' + fmt(rm.temp, 1) + ' °C: abbassala di 2-3 gradi prima di dormire.'; why = 'Sotto i 20 °C di solito il sonno profondo aumenta.'; exp = 'temp'; }
+    else if (rm && isNum(rm.co2) && rm.co2 > 800) { t = 'CO2 a ' + fmt(rm.co2) + ' ppm: socchiudi la finestra o la porta stanotte.'; why = 'Con la CO2 sotto 800 ppm l\'aria della notte resta fresca.'; exp = 'co2'; }
+    else { t = 'Cerca di addormentarti entro le 23.'; why = 'Un orario regolare aiuta HRV e recupero.'; exp = 'bed'; }
+    c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Stasera</span>${st ? `<span class="muted small">esperimento</span>` : ''}</div><p style="font-weight:600">${esc(t)}</p><p class="small muted">${esc(why)}</p>
+      ${st ? expMarks(st) : exp ? `<button class="more" id="tExp">Prova per 7 notti ›</button>` : ''}`;
+    const b = $('#tExp', c); if (b) b.onclick = e => { e.stopPropagation(); buzz(); startExp(exp); };
+    return c;
+  };
+
   // =========================================================================
   // OGGI
   // =========================================================================
@@ -740,10 +808,9 @@
     const hero = h('section', 'hero');
     const hrs = +((DATA.now || '').slice(11, 13) || 12);
     const greet = hrs < 5 ? 'Ancora sveglio?' : hrs < 13 ? 'Buongiorno!' : hrs < 18 ? 'Buon pomeriggio!' : 'Buonasera!';
-    hero.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>${greet}</span>${R ? `<span class="pill ${R.score >= 80 ? 'good' : R.score >= 60 ? 'warn' : 'bad'}">${R.score >= 80 ? 'via libera' : R.score >= 60 ? 'con giudizio' : 'ai box'}</span>` : ''}</div>
+    hero.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>${greet}</span></div>
       <div class="lede"><h2>${title}</h2><p>${advice}</p></div>
-      ${R ? `<p class="nightof${lastG.date === today ? '' : ' old'}">${lastG.date === today ? 'Notte appena passata' : 'Notte del ' + dLabel(lastG.date) + ' · quella di stanotte arriva quando l\'orologio sincronizza con Garmin'}</p>` : ''}
-      ${R ? tachoHTML(R.score) + sectorsHTML(R.parts) : ''}`;
+      ${R ? tachoHTML(R.score, lastG.date === today ? 'stanotte' : 'notte ' + dLabel(lastG.date)) + sectorsHTML(R.parts) : ''}`;
     v.appendChild(hero);
 
     // check-in
@@ -766,6 +833,7 @@
     }
     v.appendChild(ci);
     v.appendChild(recoveryCard());
+    v.appendChild(tonightCard());
 
     // storie: note, scoperte, tendenze
     const an = analysis(); setBadge();
@@ -1104,6 +1172,7 @@
     const back = h('button', 'back', '‹ Indietro'); back.onclick = () => go(lastIdx >= 0 ? TABS[lastIdx][0] : 'oggi');
     v.appendChild(back);
     v.appendChild(h('div', 'vhead', `<div><span class="k">Insight</span><h1>Cosa dicono i tuoi dati</h1></div><span class="muted small">${gNights.length} notti · ${an.tested} confronti</span>`));
+    v.appendChild(expCard());
     const F = [['all', 'Tutto'], ['score', 'Sleep score'], ['hrv', 'HRV'], ['rhr', 'Battito'], ['bb', 'Body Battery'], ['deep', 'Profondo'], ['energy', 'Energia'], ['moodv', 'Umore'], ['pain', 'Dolore']];
     {
       const MB = moodBy(), last7 = [...Array(7)].map((_, i) => addDays(today, -i));

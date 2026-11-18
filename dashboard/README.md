@@ -37,7 +37,15 @@ Riquadro in Oggi: per sleep score, HRV, battito a riposo (invertito), sonno prof
 mediana delle ultime 7 notti divisa per la mediana dei 60 giorni prima dell'operazione (100 % = come prima;
 verde ≥ 97 %, giallo ≥ 85 %, rosso sotto). Più il dolore medio dei check-in. La data si inserisce dall'app.
 Sopra il contagiri c'è sempre la notte a cui si riferisce (in giallo se non è ancora quella appena passata).
-Casella "Ho fatto fisio" nel check-in: entra nell'analisi come fattore (notti dopo la fisio contro le altre).
+Caselle "Ieri e stanotte" nel check-in (fisio, antidolorifico, alcol, caffè dopo le 15, cena tardi, finestra aperta):
+ognuna entra nell'analisi come fattore (notti con contro notti senza).
+
+## Esperimenti e "Stasera"
+
+Esperimenti di 7 notti (Insight): camera sotto 20 °C, CO2 sotto 800, a dormire entro le 23, niente caffè dopo le 15.
+L'app controlla da sola ogni notte (sensore, Garmin o check-in) e confronta le notti rispettate (almeno 3) con le
+14 notti prima dell'inizio: profondo, score, HRV, battito, Body Battery, dolore. Elenco in `APP_SETTINGS.exps`.
+"Stasera" in Oggi: un consiglio solo, dall'esperimento in corso o dalla camera in quel momento, con "Prova per 7 notti".
 Tema: pulsante in alto a destra (automatico secondo il telefono, chiaro, scuro), ricordato nel browser.
 
 ## Punteggio di recupero
