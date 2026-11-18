@@ -499,7 +499,7 @@
       let bar = '';
       if (b !== null && e !== null && e > b) {
         const st = PH.filter(k => n[k[0]] > 0);
-        bar = `<div class="tlbar" style="left:${x(clamp(b, T0, T1))};width:calc(${x(clamp(e, T0, T1))} - ${x(clamp(b, T0, T1))});--j:${j}">${st.map(k => `<i style="flex:${n[k[0]]};background:var(${k[2]})"${tipAttr(`<span class="tk"><i style="background:var(${k[2]})"></i><b>${k[1]}</b></span>`)}></i>`).join('')}</div>`;
+        bar = `<div class="tlbar" style="left:${x(clamp(b, T0, T1))};width:calc(${x(clamp(e, T0, T1))} - ${x(clamp(b, T0, T1))});--j:${j}">${st.map(k => `<i style="flex:${n[k[0]]};background:var(${k[2]})"${tipAttr(`<span class="tk"><i style="background:var(${k[2]})"></i><b>${k[1]}</b> ${fmt(n[k[0]])} min</span>`)}></i>`).join('')}</div>`;
       }
       row.innerHTML = `<span class="d"><b>${GG[dow(n.date)]}</b>${+n.date.slice(8, 10)}</span><div class="tltrack">${bar}</div><span class="sc" style="color:${scoreColor(n.score)}">${isNum(n.score) ? n.score : '-'}</span>`;
       row.onclick = () => { buzz(); onPick(n.date); };
