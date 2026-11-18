@@ -12,18 +12,24 @@ check-in, Insight dal pulsante in alto a destra. Ogni sezione ha un suo colore. 
 linee si scorrono col dito; toccare un punto che è una notte apre quella notte. Dettagli (check-in,
 attività, settimana) in schede che salgono dal basso. Sezione e filtri restano in `localStorage`.
 
-1. **Oggi**: contagiri del recupero e 4 settori (sonno, HRV, riposo, energia) con il valore vero e lo scarto dalla media, check-in, carosello
+1. **Oggi**: contagiri del recupero e 4 settori (sonno, HRV, riposo, energia) con il valore vero e lo scarto dalla media, check-in
+   (con "Diario: tutti i check-in" che apre lo storico), carosello
    "Per te oggi" (note della notte, tendenze, scoperte), timeline delle ultime 7 notti, casa (CO2 su
    semicerchio), sport degli ultimi 7 giorni, corpo con peso a 6 mesi, "La tua settimana", recupero a 30 giorni.
 2. **Sonno**: navigazione tra le notti (frecce e swipe), anello, fasi rispetto al solito, HRV, riposo,
-   recupero, note, aria della camera, timeline di 14 notti, andamento (8 metriche, 4 periodi), calendario.
+   recupero, note, check-in del mattino dopo, aria della camera, timeline di 14 notti, andamento (8 metriche, 4 periodi), calendario.
 3. **Sport**: carico degli ultimi 7 giorni rispetto alla media delle ultime 4 settimane (rapporto
    < 0,8 in calo, 0,8-1,3 equilibrato, 1,3-1,5 in salita, > 1,5 molto alto), minuti a settimana,
    VO2 max, attività recenti con dettaglio e notte successiva.
 4. **Corpo**: 6 metriche con periodo, composizione dell'ultima pesata, tendenza, ultime pesate.
 5. **Casa**: CO2 attuale su semicerchio, temperatura, umidità, seconda stanza, storico, CO2 per notte.
-6. **Insight**: scoperte filtrabili (anche energia, umore, dolore), grafico a punti, andamento di
+6. **Insight**: diario dei check-in (ultimi 7 giorni, anche quelli mancanti, "Mostra tutto"; tocca un giorno per
+   modificarlo o aggiungerlo), scoperte filtrabili (anche energia, umore, dolore), grafico a punti, andamento di
    energia e umore, tendenze, cosa sta ancora imparando, metodo.
+
+Spiegazioni: ogni elemento grafico che non è ovvio (colori della timeline: solo il nome della fase, fasi del sonno, calendario,
+barre dello sport, settori e contagiri) ha un fumetto. Col mouse compare al passaggio; col dito il primo
+tocco mostra il fumetto e il secondo fa l'azione (es. apre la notte). "‹ Oggi" e il logo riportano a Oggi.
 
 ## Punteggio di recupero
 
