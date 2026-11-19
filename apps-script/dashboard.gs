@@ -25,8 +25,11 @@ function nData_() {
   const id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   if (!id) throw new Error('Proprietà dello script mancante: SHEET_ID');
   const ss = SpreadsheetApp.openById(id);
+  // Il foglio può trasformare il testo in date ("2026-11-18") o in orari ("23:11"): qui tutto torna testo,
+  // così nessuna riga e nessun orario viene scartato più avanti.
   const fmt = v => (v instanceof Date) ? Utilities.formatDate(v, N_TZ, 'yyyy-MM-dd HH:mm') : v;
-  const vals = sh => sh ? sh.getDataRange().getValues().map(r => [fmt(r[0])].concat(r.slice(1))) : [];
+  const cell = v => !(v instanceof Date) ? v : v.getFullYear() < 1900 ? Utilities.formatDate(v, N_TZ, 'HH:mm') : Utilities.formatDate(v, N_TZ, 'yyyy-MM-dd');
+  const vals = sh => sh ? sh.getDataRange().getValues().map(r => [fmt(r[0])].concat(r.slice(1).map(cell))) : [];
   const out = nBuild_(vals(ss.getSheets()[0]), vals(ss.getSheetByName('Garmin')),
     vals(ss.getSheetByName('Renpho')), Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd HH:mm'));
   out.activities = nActivities_(vals(ss.getSheetByName('Attivita')));
@@ -44,8 +47,15 @@ const N_FEATURES = ['recovery', 'tonight'];   // parti dell'app che si possono n
 
 /** Impostazioni dell'utente salvate dall'app (es. data dell'operazione): proprietà APP_SETTINGS, mai nel repo. */
 function nSettings_() {
-  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_SETTINGS') || '{}'); } catch (e) { return {}; }
+  let st = {};
+  try { st = JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_SETTINGS') || '{}'); } catch (e) { st = {}; }
+  if (!('op_date' in st) && (st.hide || []).indexOf('recovery') < 0) st.op_date = N_OP_DATE;
+  return st;
 }
+// Data dell'operazione del proprietario del ramo main: messa nel codice pubblico con il suo consenso (19/11/2026),
+// così l'app non la chiede. Si può cambiare dall'app ("giorno N ›"): il valore salvato in APP_SETTINGS ha la precedenza.
+// Il ramo p2 della seconda persona non deve avere questa riga.
+const N_OP_DATE = '2026-10-21';
 
 /** Attività sportive (scheda "Attivita"): [data, ora, tipo, nome, minuti, km, FC media, FC max, kcal, TE aerobico, TE anaerobico, carico, VO2max]. */
 function nActivities_(rows) {
@@ -68,8 +78,10 @@ function nMood_(rows) {
   const h = {}; rows[0].forEach((n, i) => { h[String(n).trim()] = i; });
   const str = v => (v instanceof Date) ? Utilities.formatDate(v, N_TZ, 'yyyy-MM-dd') : String(v || '');
   const num = v => (typeof v === 'number' && isFinite(v)) ? v : null;
-  return rows.slice(1).filter(r => /^\d{4}-\d{2}-\d{2}$/.test(str(r[h.date]))).map(r => ({
-    date: str(r[h.date]), time: String(r[h.time] || ''), energy: num(r[h.energy]), mood: num(r[h.mood]),
+  // La data può arrivare come testo "yyyy-MM-dd", come "yyyy-MM-dd HH:mm" (cella diventata data e formattata
+  // da nData_) o come Date: si guarda solo il giorno, così nessun check-in viene scartato.
+  return rows.slice(1).filter(r => /^\d{4}-\d{2}-\d{2}/.test(str(r[h.date]))).map(r => ({
+    date: str(r[h.date]).slice(0, 10), time: String(r[h.time] || ''), energy: num(r[h.energy]), mood: num(r[h.mood]),
     pain: num(r[h.pain]), note: String(r[h.note] || '').slice(0, 280),
     tags: h.tags === undefined ? [] : String(r[h.tags] || '').split(',').map(t => t.trim()).filter(t => N_TAGS.indexOf(t) >= 0) }));
 }

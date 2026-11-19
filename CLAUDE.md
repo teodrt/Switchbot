@@ -10,6 +10,8 @@ prestazioni sportive e umore. Nomi su Google: script "Ritmo - Raccolta dati", fo
 - **Il repo è pubblico.** Non committare mai: token, secret, ID di fogli o script Google,
   ID dei dispositivi, email, indirizzi o luoghi, dati di salute o export (CSV, JSON).
   Questi stanno nelle proprietà dello script Apps Script o nel foglio Google.
+  Unica eccezione, con il consenso esplicito del proprietario (19/11/2026): la data della sua operazione
+  (`N_OP_DATE` in `dashboard.gs`, solo sul ramo `main`).
 - Rispondi all'utente in italiano, con il trattino normale (non quello lungo).
 - Le chiamate all'API SwitchBot fatte da Claude per diagnosi sono **solo GET**
   (`/devices`, `/devices/{id}/status`). Mai inviare comandi ai dispositivi.
