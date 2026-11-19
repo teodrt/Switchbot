@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '18 nov 2026 · v5.6';
+  const RELEASE = '18 nov 2026 · v5.7';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -742,7 +742,48 @@
       <p class="small muted">Adesso rispetto al tuo normale di prima (100 % = come prima).</p>
       ${pre.length >= 10 ? `<div class="rlines">${rows}</div><p class="hint">La tacca è il 100 %. Tocca una riga per i valori.</p>` : '<p class="empty">Servono almeno 10 notti nei 60 giorni prima dell\'operazione per il confronto.</p>'}
       ${pm.length ? `<p class="small">Dolore: <b class="num">${fmt(painNow, 1)}</b>/10 in media ${pm.length >= 7 ? 'negli ultimi 7 check-in' : 'nei check-in fatti'}${pm.length >= 8 ? ' (all\'inizio ' + fmt(avg(pm.slice(0, 7).map(m => m.pain)), 1) + ')' : ''}.</p>` : ''}`;
+    const sr = sportReady();
+    if (sr) { const l = h('button', 'more', sr.green ? 'Ritorno allo sport: pronto dai dati ›' : 'Ritorno allo sport: ' + Math.min(sr.streak, 7) + ' / 7 giorni ›'); l.style.justifySelf = 'start'; l.onclick = e => { e.stopPropagation(); buzz(); go('sport'); }; c.appendChild(l); }
     $('#opEdit', c).onclick = e => { e.stopPropagation(); ask(); };
+    return c;
+  };
+
+  // Ritorno allo sport: HRV, battito a riposo e sonno profondo (mediana delle ultime 3 notti) almeno al 95 % del
+  // normale di prima dell'operazione per 7 giorni di fila, e dolore medio dei check-in recenti al massimo 3/10.
+  const SR_M = [['HRV', 'hrv', 1, ' ms'], ['Battito a riposo', 'rhr', -1, ' bpm'], ['Sonno profondo', 'deep', 1, ' min']];
+  const sportReady = () => {
+    const OP = SETTINGS.op_date; if (!OP) return null;
+    const pre = gNights.filter(n => n.date >= addDays(OP, -60) && n.date < OP); if (pre.length < 10) return null;
+    const base = {}; SR_M.forEach(m => { base[m[1]] = median(pre.map(n => n[m[1]])); });
+    const post = gNights.filter(n => n.date > OP);
+    const dayPct = i => { const w = post.slice(Math.max(0, i - 2), i + 1); const out = {};
+      SR_M.forEach(m => { const v = median(w.map(n => n[m[1]])), b = base[m[1]]; out[m[1]] = isNum(v) && isNum(b) && v && b ? 100 * (m[2] > 0 ? v / b : b / v) : null; }); return out; };
+    const days = post.map((n, i) => { const pc = dayPct(i); return { date: n.date, pc: pc, ok: SR_M.every(m => isNum(pc[m[1]]) && pc[m[1]] >= 95) }; });
+    let streak = 0; for (let i = days.length - 1; i >= 0 && days[i].ok; i--) streak++;
+    const pm = MOOD.filter(m => m.date > addDays(today, -7) && isNum(m.pain)), pain = pm.length >= 3 ? avg(pm.map(m => m.pain)) : null;
+    const painOk = pain === null ? null : pain <= 3;
+    const last = days[days.length - 1] || null;
+    return { base: base, days: days.slice(-7), streak: streak, now: last ? last.pc : {}, pain: pain, painN: pm.length, painOk: painOk, green: streak >= 7 && painOk !== false };
+  };
+  // Recupero dopo un allenamento: la notte dopo rispetto alla mediana delle 30 notti prima.
+  const afterWorkout = a => { const n = byDate[addDays(a.date, 1)]; if (!n || !isNum(n.score)) return null;
+    const bh = baseline(n.date, 'hrv'), br = baseline(n.date, 'rhr'), bs = baseline(n.date, 'score');
+    const hp = isNum(n.hrv) && bh ? 100 * n.hrv / bh : null, rp = isNum(n.rhr) && br ? 100 * br / n.rhr : null;
+    const good = (hp === null || hp >= 95) && (rp === null || rp >= 95);
+    return { n: n, hp: hp, rp: rp, bs: bs, good: good }; };
+  const sportReadyCard = () => {
+    const r = sportReady(); if (!r) return null;
+    const c = h('section', 'card'); paint(c, 'sport');
+    const verdict = r.green ? 'Dai dati sei pronto per riprendere gradualmente. Chiedi conferma al fisioterapista o al medico prima di ricominciare.'
+      : r.painOk === false ? 'Il dolore medio di questi giorni è sopra 3/10: aspetta che scenda prima di riprendere.'
+      : 'Non ancora: servono 7 giorni di fila con HRV, battito a riposo e sonno profondo almeno al 95 % del tuo normale.';
+    c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Ritorno allo sport</span><span class="pill ${r.green ? 'good' : 'warn'}">${r.green ? 'pronto' : Math.min(r.streak, 7) + ' / 7 giorni'}</span></div>
+      <p class="small">${verdict}</p>
+      <div class="xmarks">${r.days.map(d => `<i class="${d.ok ? 'ok' : 'no'}"${tipAttr('<b>' + cap(GIORNI[dow(d.date)]) + ' ' + dLabel(d.date) + '</b><br>' + SR_M.map(m => m[0] + ' ' + (isNum(d.pc[m[1]]) ? Math.round(d.pc[m[1]]) + ' %' : '-')).join(' · '))}></i>`).join('')}</div>
+      <div class="rlines">${SR_M.map(m => { const pc = r.now[m[1]], st = !isNum(pc) ? '' : pc >= 95 ? 'good' : pc >= 85 ? 'warn' : 'bad';
+        return `<div class="rline"${tipAttr('<b>' + m[0] + '</b><br>Mediana delle ultime 3 notti rispetto al tuo normale di prima dell\'operazione (' + fmt(r.base[m[1]]) + m[3] + '). Serve almeno il 95 %.' + (m[2] < 0 ? ' Più basso è meglio.' : ''))}><span>${m[0]}</span><div class="track"><i data-w="${isNum(pc) ? Math.min(100, pc / 1.3).toFixed(0) : 0}%" style="background:var(--${st || 'faint'})"></i><b class="mark" style="left:73.1%"></b></div><span class="${st} num">${isNum(pc) ? Math.round(pc) + ' %' : '-'}</span></div>`; }).join('')}
+        <div class="rline"><span>Dolore</span><span class="small muted" style="grid-column:span 2">${r.pain === null ? 'servono almeno 3 check-in negli ultimi 7 giorni (ne hai ' + r.painN + ')' : fmt(r.pain, 1) + '/10 di media negli ultimi 7 giorni · serve 3 o meno'}</span></div></div>
+      <p class="hint">Ogni tacca è un giorno: verde se tutte e tre le misure sono al 95 % o più. La tacca sulle barre è il 95 %.</p>`;
     return c;
   };
 
@@ -1062,6 +1103,12 @@
       <div class="grid3" style="margin-top:12px">${stat('Allenamenti', fmt(last7.length), '', 'in 28 g ' + last28.length, '')}${stat('Minuti', fmt(sum(last7.map(a => a.min))), '', 'media sett. ' + fmt(sum(last28.map(a => a.min)) / 4), '')}${stat('Carico', fmt(acute), '', 'medio ' + fmt(chronic), zone[1])}</div>
       <div style="display:grid;gap:4px;margin-top:14px"><h2 style="font-size:1.2rem">${zone[0]}</h2><p class="muted small">${zone[2]}</p></div>`;
     v.appendChild(hero);
+    { const sr = sportReadyCard(); if (sr) v.appendChild(sr); }
+    { const lastA = ACTS.slice().reverse().find(a => afterWorkout(a));
+      if (lastA) { const w = afterWorkout(lastA), sp = sportOf(lastA.type), c = h('section', 'card tap');
+        c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Dopo l'ultimo allenamento</span><span class="pill ${w.good ? 'good' : 'warn'}">${w.good ? 'recuperato' : 'recupero lento'}</span></div>
+          <p class="small"><b>${esc(lastA.name || sp[0])}</b> · ${cap(GIORNI[dow(lastA.date)])} ${dLabelY(lastA.date)}. La notte dopo: sleep score <b>${w.n.score}</b>${isNum(w.hp) ? ', HRV al <b>' + Math.round(w.hp) + ' %</b> del solito' : ''}${isNum(w.rp) ? ', battito a riposo al <b>' + Math.round(w.rp) + ' %</b>' : ''}.</p>`;
+        c.onclick = () => openActivity(lastA); v.appendChild(c); } }
     if (!ACTS.length) { v.appendChild(h('p', 'empty', 'Nessuna attività importata. Esegui garminActivitiesBackfill nello script per caricare lo storico da Garmin.')); return; }
     // volume settimanale
     const weeks = [], wEnd = dayNum(today) - ((dow(today) + 6) % 7) + 6;
@@ -1090,6 +1137,7 @@
     box.innerHTML = `<div class="row-wrap"><span class="lrow" style="border:0;padding:0;grid-template-columns:40px"><span class="ai">${icon(sp[1])}</span></span><div><span class="eyebrow">${sp[0]} · ${cap(GIORNI[dow(a.date)])} ${dLabelY(a.date)}</span><h2>${esc(a.name || sp[0])}</h2></div></div>
       <div class="grid3">${stat('Durata', fmt(a.min), 'min', a.time ? 'alle ' + esc(a.time) : '', '')}${stat('Distanza', isNum(a.km) && a.km > 0 ? fmt(a.km, 2) : '-', 'km', isNum(a.km) && a.km > 0 && isNum(a.min) ? fmt(a.min / a.km, 1) + ' min/km' : '', '')}${stat('Calorie', fmt(a.kcal), 'kcal', '', '')}
       ${stat('FC media', fmt(a.hr), 'bpm', 'max ' + fmt(a.hrMax), '')}${stat('Training Effect', fmt(a.te, 1), '', 'anaerobico ' + fmt(a.ane, 1), isNum(a.te) ? (a.te >= 4 ? 'warn' : 'good') : '')}${stat('Carico', fmt(a.load), '', isNum(a.vo2) ? 'VO2 max ' + fmt(a.vo2) : '', '')}</div>
+      ${(() => { const w = afterWorkout(a); return w ? `<div class="card flat"><span class="eyebrow">Recupero</span><p class="small"><span class="pill ${w.good ? 'good' : 'warn'}">${w.good ? 'recuperato' : 'recupero lento'}</span> ${isNum(w.hp) ? 'HRV al ' + Math.round(w.hp) + ' % del solito' : ''}${isNum(w.hp) && isNum(w.rp) ? ', ' : ''}${isNum(w.rp) ? 'battito a riposo al ' + Math.round(w.rp) + ' %' : ''} (100 % = come le 30 notti prima).</p></div>` : ''; })()}
       ${night && isNum(night.score) ? `<div class="card flat"><span class="eyebrow">La notte dopo</span><p class="small">Sleep score <strong>${night.score}</strong>, HRV <strong>${fmt(night.hrv)}</strong> ms, Body Battery al risveglio <strong>${fmt(night.bb_wake)}</strong>.</p></div>` : ''}`;
   });
 
@@ -1251,7 +1299,7 @@
 
   // avvio: segnala al motore che l'app è stata aperta (versione e ora, per la diagnosi)
   setTimeout(setBadge, 400);
-  try { if (window.google && google.script && google.script.run) google.script.run.withFailureHandler(() => {}).ritmoSaveCheckin({ ping: true, release: RELEASE, ref: REF, view: (location.hash || '#oggi').slice(1), w: window.innerWidth }); } catch (e) {}
+  try { if (window.google && google.script && google.script.run) google.script.run.withFailureHandler(() => {}).ritmoSaveCheckin({ ping: true, release: RELEASE, ref: REF, view: (location.hash || '#oggi').slice(1), w: window.innerWidth, url: document.referrer || '' }); } catch (e) {}
   const start = (location.hash || '').replace('#', '');
   go(TABS.some(t => t[0] === start) || start === 'insight' ? start : 'oggi');
   }

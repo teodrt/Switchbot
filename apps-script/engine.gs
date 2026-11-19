@@ -14,7 +14,7 @@ const E_JOBS = [
   { id: 'switchbot', fn: 'logReading', every: true },
   { id: 'air', fn: 'airSync', every: true },
   { id: 'garmin', fn: 'garminDaily', daily: '07:30', until: 'gHasToday_', retryMin: 30, giveUp: '13:00' },
-  { id: 'reminder', fn: 'nCheckinReminder', daily: '12:00' },
+  { id: 'reminder', fn: 'nCheckinReminder', daily: '07:00', until: 'nReminderDone_', retryMin: 10, giveUp: '12:30' },
   { id: 'renpho', fn: 'renphoDaily', daily: '11:00' },
   { id: 'report', fn: 'ritmoReportWeekly', weekly: [1, '08:40'] }
 ];

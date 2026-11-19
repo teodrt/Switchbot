@@ -40,6 +40,14 @@ Sopra il contagiri c'è sempre la notte a cui si riferisce (in giallo se non è 
 Caselle "Ieri e stanotte" nel check-in (fisio, antidolorifico, alcol, caffè dopo le 15, cena tardi, finestra aperta):
 ognuna entra nell'analisi come fattore (notti con contro notti senza).
 
+## Ritorno allo sport
+
+In Sport (e come link nel riquadro del recupero): HRV, battito a riposo (invertito) e sonno profondo, mediana delle
+ultime 3 notti divisa per il normale di prima dell'operazione. Un giorno è verde se tutte e tre sono ≥ 95 %; "pronto"
+dopo 7 giorni verdi di fila con dolore medio dei check-in degli ultimi 7 giorni ≤ 3/10 (se ce ne sono almeno 3).
+Il testo ricorda di chiedere conferma al fisioterapista o al medico. "Dopo l'ultimo allenamento" e il dettaglio di ogni
+attività mostrano la notte dopo rispetto alle 30 notti prima (recuperato se HRV e battito ≥ 95 %).
+
 ## Esperimenti e "Stasera"
 
 Esperimenti di 7 notti (Insight): camera sotto 20 °C, CO2 sotto 800, a dormire entro le 23, niente caffè dopo le 15.
