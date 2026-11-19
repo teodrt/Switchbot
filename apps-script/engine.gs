@@ -23,8 +23,22 @@ const E_JOBS = [
 const E_MIGRATIONS = [
   { id: '2026-11-17-attivita-3-anni', fn: 'garminActivitiesBackfill' },
   { id: '2026-11-18-storico-garmin', fn: 'eBackfillGarmin_' },   // per una nuova installazione: 90 notti
-  { id: '2026-11-18-storico-renpho', fn: 'eBackfillRenpho_' }    // e tutte le pesate (no-op se ci sono già)
+  { id: '2026-11-18-storico-renpho', fn: 'eBackfillRenpho_' },   // e tutte le pesate (no-op se ci sono già)
+  { id: '2026-11-19-date-come-testo', fn: 'eFixDates_' }          // celle data diventate Date -> testo yyyy-MM-dd
 ];
+
+/** Riscrive come testo "yyyy-MM-dd" le date che il foglio ha trasformato in valori data (non cancella niente). */
+function eFixDates_() {
+  const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
+  [['Umore', 1], ['Garmin', 1], ['Renpho', 1], ['Attivita', 2]].forEach(t => {
+    const sh = ss.getSheetByName(t[0]); if (!sh || sh.getLastRow() < 2) return;
+    const rg = sh.getRange(2, t[1], sh.getLastRow() - 1, 1), v = rg.getValues();
+    if (!v.some(r => r[0] instanceof Date)) return;
+    rg.setNumberFormat('@');
+    rg.setValues(v.map(r => [r[0] instanceof Date ? Utilities.formatDate(r[0], E_TZ, 'yyyy-MM-dd') : r[0]]));
+    eLog_('date sistemate come testo nella scheda ' + t[0]);
+  });
+}
 
 /** Storico Garmin solo se la scheda è quasi vuota (nuova installazione). */
 function eBackfillGarmin_() {

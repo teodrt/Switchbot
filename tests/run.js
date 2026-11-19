@@ -82,6 +82,19 @@ test('nMood_: tag fisio e date', () => {
   assert.deepStrictEqual(m.map(x => x.tags), [['fisio'], []]);
 });
 
+test('nMood_: nessun check-in perso se la data è diventata "yyyy-MM-dd HH:mm" o Date', () => {
+  const m = nMood_([N_MOOD_HEADER.slice(0, 6), ['2026-11-18 00:00', '08:15', 3, 3, 3, 'ieri'], [new Date('2026-11-17T12:00:00Z'), '08:00', 2, 2, 4, ''], ['2026-11-19', '07:25', 3, 3, 3, 'oggi']]);
+  assert.deepStrictEqual(m.map(x => x.date), ['2026-11-18', '2026-11-17', '2026-11-19']);
+});
+
+test('eFixDates_: le date diventano testo, nessuna riga persa', () => {
+  SHEETS.Umore = new Sheet([N_MOOD_HEADER, [new Date('2026-11-18T00:00:00Z'), '08:15', 3, 3, 3, 'ieri', ''], ['2026-11-19', '07:25', 3, 3, 3, 'oggi', '']]);
+  const P = global.PropertiesService, props = { SHEET_ID: 'x' };
+  global.PropertiesService = { getScriptProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = v; } }) };
+  try { eFixDates_(); } finally { global.PropertiesService = P; }
+  assert.deepStrictEqual(SHEETS.Umore.rows.slice(1).map(r => [r[0], r[5]]), [['2026-11-18', 'ieri'], ['2026-11-19', 'oggi']]);
+});
+
 test('nActivities_: battito massimo oltre 200 scartato', () => {
   const h = ['activity_id', 'date', 'start', 'type', 'name', 'duration_min', 'distance_km', 'avg_hr', 'max_hr', 'calories', 'aerobic_te', 'anaerobic_te', 'training_load', 'vo2max'];
   const a = nActivities_([h, ['1', '2026-01-01', '10:00', 'padel', 'x', 60, 2, 130, 212, 500, 2, 2, 100, 50]]);
