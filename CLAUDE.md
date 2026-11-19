@@ -77,6 +77,12 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
 - Prima del merge: provare con i dati reali (Node + Playwright) e aggiornare l'anteprima privata.
 - L'utente apre l'app dal link di test della web app (finisce con `/dev`, solo per il proprietario).
 - `DATA` arriva solo da Apps Script: nessun dato personale in `app/`.
+- **Anteprima live accanto alla chat**: l'artifact privato "Ritmo" (l'unico con quel titolo nella lista degli artifact)
+  legge il foglio con il connettore Google Drive a ogni apertura (capability `mcp`, tool `download_file_content`) e
+  ricostruisce `DATA` con le funzioni di `dashboard.gs`; se Drive non risponde mostra la copia incorporata.
+  Si costruisce con `tools/live-preview.py` (id del foglio da variabile d'ambiente, mai nel repo) e si ripubblica sullo
+  stesso URL a ogni modifica dell'interfaccia. **All'inizio di ogni sessione aprirla con Artifact `open`**, così
+  l'utente vede subito i dati aggiornati qui di fianco.
 - **A ogni modifica, in fondo al messaggio all'utente, stampare sempre i link**: anteprima privata
   (artifact su claude.ai), link `/dev` dell'app e pull request. I link non vanno nel repo (ID):
   si prendono dalla conversazione, dalla lista degli artifact o dalla scheda `Motore`.
