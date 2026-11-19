@@ -84,6 +84,9 @@ function ritmoSaveCheckin(c) {
     PropertiesService.getScriptProperties().setProperty('APP_SEEN', JSON.stringify({
       at: Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd HH:mm'), release: String(c.release || '').slice(0, 40),
       ref: String(c.ref || '').slice(0, 12), view: String(c.view || '').slice(0, 20), w: Number(c.w) || null }));
+    // Link dell'app di questa persona (dalla pagina che la contiene), per il pulsante nelle mail.
+    const m = String(c.url || '').match(/^https:\/\/script\.google\.com\/(?:a\/[\w.-]+\/)?macros\/s\/[\w-]+\/(?:dev|exec)/);
+    if (m) PropertiesService.getScriptProperties().setProperty('APP_URL', m[0]);
     return { ok: true };
   }
   // Impostazioni dall'app (nessun dato nel foglio): data dell'operazione ed esperimenti.
@@ -259,20 +262,37 @@ function nBuild_(sbRows, gRows, rRows, now) {
 }
 
 /**
- * Promemoria del check-in (dal pianificatore, alle 12): una mail breve se oggi manca il check-in.
- * Restituisce true se ha mandato la mail.
+ * Promemoria del check-in, appena sveglio: il pianificatore lo prova dalle 7 ogni 10 minuti. Manda la mail quando
+ * Garmin ha importato la notte appena passata (cioè dopo il risveglio e la sincronizzazione dell'orologio), oppure
+ * alle 12 se la notte non arriva. Una mail al giorno al massimo, e niente se il check-in è già fatto.
+ * Il link è quello della propria app: RITMO_URL se impostata, altrimenti APP_URL salvata dall'app all'apertura.
  */
 function nCheckinReminder() {
   const p = PropertiesService.getScriptProperties();
+  const today = Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd'), hm = Utilities.formatDate(new Date(), N_TZ, 'HH:mm');
+  if (p.getProperty('REMINDER_DAY') === today) return false;
   const ss = SpreadsheetApp.openById(p.getProperty('SHEET_ID'));
   const sh = ss.getSheetByName(N_MOOD_TAB);
-  const today = Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd');
-  if (sh && eKeys_(sh).indexOf(today) >= 0) return false;
-  const url = p.getProperty('RITMO_URL') || '';
-  MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: 'Ritmo · come ti senti oggi?', name: 'Ritmo',
+  if (sh && eKeys_(sh).indexOf(today) >= 0) { p.setProperty('REMINDER_DAY', today); return false; }
+  let night = null;
+  try {
+    const g = ss.getSheetByName('Garmin');
+    const i = g ? eKeys_(g).indexOf(today) : -1;
+    if (i >= 0) { const r = g.getRange(i + 2, 1, 1, 10).getValues()[0]; if (r[1] !== '' && r[1] !== null) night = { score: r[1], h: r[2], end: r[9] instanceof Date ? Utilities.formatDate(r[9], N_TZ, 'HH:mm') : String(r[9] || '') }; }
+  } catch (e) { night = null; }
+  if (!night && hm < '12:00') return false;   // non ancora sveglio (o orologio non sincronizzato): si riprova
+  const url = p.getProperty('RITMO_URL') || p.getProperty('APP_URL') || '';
+  const hrs = typeof night?.h === 'number' ? Math.floor(night.h) + 'h ' + String(Math.round((night.h % 1) * 60)).padStart(2, '0') : '';
+  MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: 'Ritmo · buongiorno, com\'è andata?', name: 'Ritmo',
     htmlBody: '<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;color:#1d2433">' +
-      '<p>Non hai ancora fatto il check-in di oggi: energia, umore, dolore e se ieri hai fatto fisio.</p>' +
-      '<p>Bastano 10 secondi e ogni giorno in più aiuta Ritmo a capire cosa ti fa dormire e recuperare meglio.</p>' +
-      (url ? '<p><a href="' + url + '" style="display:inline-block;background:#ff6a2b;color:#fff;text-decoration:none;padding:11px 20px;border-radius:12px;font-weight:600">Apri Ritmo</a></p>' : '<p>Apri Ritmo dal tuo link.</p>') + '</div>' });
+      (night ? '<p>Buongiorno. Stanotte: sleep score <b>' + night.score + '</b>' + (hrs ? ', <b>' + hrs + '</b> di sonno' : '') + (night.end ? ', sveglia alle ' + night.end : '') + '.</p>' : '') +
+      '<p>Fai il check-in di oggi: energia, umore, dolore e cosa hai fatto ieri. Bastano 10 secondi.</p>' +
+      (url ? '<p><a href="' + url + '" style="display:inline-block;background:#ff6a2b;color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:600">Apri Ritmo e fai il check-in</a></p>' : '<p>Apri Ritmo dal tuo link.</p>') + '</div>' });
+  p.setProperty('REMINDER_DAY', today);
   return true;
+}
+
+/** Per il pianificatore: il promemoria di oggi è chiuso (mandato o non necessario). */
+function nReminderDone_() {
+  return PropertiesService.getScriptProperties().getProperty('REMINDER_DAY') === Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd');
 }

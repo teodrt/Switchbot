@@ -95,6 +95,28 @@ test('aria condivisa: solo letture valide e solo dati dell\'aria', () => {
   assert.deepStrictEqual(aRows_(log, '').map(r => r.length), [4, 4]);
 });
 
+test('promemoria del check-in: solo dopo la notte (o alle 12), una volta, con il proprio link', () => {
+  const props = { SHEET_ID: 'x', APP_URL: 'https://script.google.com/macros/s/ABC/dev' }, mails = [];
+  const saved = { P: global.PropertiesService, M: global.MailApp, S: global.Session, F: global.Utilities.formatDate };
+  global.PropertiesService = { getScriptProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = v; } }) };
+  global.MailApp = { sendEmail: m => mails.push(m) }; global.Session = { getEffectiveUser: () => ({ getEmail: () => 'me' }) };
+  let now = '08:00';
+  global.Utilities.formatDate = (d, tz, f) => f === 'HH:mm' ? now : '2026-11-19';
+  SHEETS.Umore = new Sheet([N_MOOD_HEADER]);
+  SHEETS.Garmin = new Sheet([['date', 'sleep_score']]);
+  try {
+    nCheckinReminder(); assert.strictEqual(mails.length, 0, 'prima della notte: niente mail'); assert(!nReminderDone_());
+    SHEETS.Garmin.rows.push(['2026-11-19', 87, 7.5, 0, 0, 0, 0, 0, '23:10', '07:05']);
+    nCheckinReminder(); assert.strictEqual(mails.length, 1, 'notte arrivata: una mail'); assert(nReminderDone_());
+    assert(mails[0].htmlBody.indexOf(props.APP_URL) >= 0, 'con il proprio link'); assert(mails[0].htmlBody.indexOf('87') >= 0);
+    nCheckinReminder(); assert.strictEqual(mails.length, 1, 'una sola al giorno');
+    delete props.REMINDER_DAY; SHEETS.Umore.rows.push(['2026-11-19', '08:30', 3, 3, 2, '', '']);
+    nCheckinReminder(); assert.strictEqual(mails.length, 1, 'check-in già fatto: niente mail');
+    delete props.REMINDER_DAY; SHEETS.Umore.rows.pop(); SHEETS.Garmin.rows.pop(); now = '12:05';
+    nCheckinReminder(); assert.strictEqual(mails.length, 2, 'alle 12 anche senza notte');
+  } finally { global.PropertiesService = saved.P; global.MailApp = saved.M; global.Session = saved.S; global.Utilities.formatDate = saved.F; }
+});
+
 test('lavori del pianificatore: funzioni esistenti', () => {
   E_JOBS.concat(E_MIGRATIONS).forEach(j => { assert.strictEqual(typeof global[j.fn], 'function', j.fn); if (j.until) assert.strictEqual(typeof global[j.until], 'function', j.until); });
 });

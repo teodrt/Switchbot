@@ -1299,7 +1299,7 @@
 
   // avvio: segnala al motore che l'app è stata aperta (versione e ora, per la diagnosi)
   setTimeout(setBadge, 400);
-  try { if (window.google && google.script && google.script.run) google.script.run.withFailureHandler(() => {}).ritmoSaveCheckin({ ping: true, release: RELEASE, ref: REF, view: (location.hash || '#oggi').slice(1), w: window.innerWidth }); } catch (e) {}
+  try { if (window.google && google.script && google.script.run) google.script.run.withFailureHandler(() => {}).ritmoSaveCheckin({ ping: true, release: RELEASE, ref: REF, view: (location.hash || '#oggi').slice(1), w: window.innerWidth, url: document.referrer || '' }); } catch (e) {}
   const start = (location.hash || '').replace('#', '');
   go(TABS.some(t => t[0] === start) || start === 'insight' ? start : 'oggi');
   }
