@@ -97,6 +97,15 @@ function ritmoInstall() {
   Logger.log('Primo giro completato. Ora puoi cancellare i vecchi file di codice: resta solo "Motore" e la pagina "ritmo".');
 }
 
+/**
+ * Da eseguire una volta a mano se il registro dice "serve un permesso": Google concede a uno script solo i
+ * permessi che vede nei suoi file, e il codice scaricato da GitHub non conta. Queste due righe gli fanno
+ * chiedere il permesso di mandare mail (promemoria e report) e di leggere la tua email (destinatario).
+ */
+function ritmoAutorizza() {
+  Logger.log('Mail ancora disponibili oggi: ' + MailApp.getRemainingDailyQuota() + ' · destinatario: ' + Session.getEffectiveUser().getEmail());
+}
+
 // ---- caricamento del codice ----
 function ritmoCall_(name, args) {
   ritmoLoad_();

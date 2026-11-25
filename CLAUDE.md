@@ -54,6 +54,11 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
   `wk` report, `e` pianificatore.
 - Rischio accettato dall'utente (17/11/2026): il codice di `main` gira con il suo account Google e
   vede le chiavi nelle proprietà. Le chiavi non vanno mai nel repo.
+- **Permessi Google**: lo script ottiene solo i permessi che Google vede nei file del progetto (Motore), non nel codice
+  scaricato. Per mail (promemoria, report) serve aver eseguito una volta `ritmoAutorizza` (in `motore.gs`). Se un
+  lavoro fallisce per un permesso mancante, il pianificatore chiude il giorno con un solo messaggio nel registro.
+- La scheda `Motore` ha anche **"aria camera adesso"** e **"aria camera notte scorsa"** (CO2 media e massima, minuti
+  sopra 1000, temperatura): chi legge il foglio da fuori (altre chat, report) usa queste righe, non l'inizio del log.
 - Il connettore Google Drive permette a Claude di leggere il progetto (`download_file_content` con
   `application/vnd.google-apps.script+json`) per controllare, non di modificarlo.
 - **Diagnosi senza aprire l'app** (l'app è privata, Claude non può aprirla): a ogni giro il motore
@@ -77,6 +82,12 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
 - Prima del merge: provare con i dati reali (Node + Playwright) e aggiornare l'anteprima privata.
 - L'utente apre l'app dal link di test della web app (finisce con `/dev`, solo per il proprietario).
 - `DATA` arriva solo da Apps Script: nessun dato personale in `app/`.
+- **Anteprima live accanto alla chat**: l'artifact privato "Ritmo" (l'unico con quel titolo nella lista degli artifact)
+  legge il foglio con il connettore Google Drive a ogni apertura (capability `mcp`, tool `download_file_content`) e
+  ricostruisce `DATA` con le funzioni di `dashboard.gs`; se Drive non risponde mostra la copia incorporata.
+  Si costruisce con `tools/live-preview.py` (id del foglio da variabile d'ambiente, mai nel repo) e si ripubblica sullo
+  stesso URL a ogni modifica dell'interfaccia. **All'inizio di ogni sessione aprirla con Artifact `open`**, così
+  l'utente vede subito i dati aggiornati qui di fianco.
 - **A ogni modifica, in fondo al messaggio all'utente, stampare sempre i link**: anteprima privata
   (artifact su claude.ai), link `/dev` dell'app e pull request. I link non vanno nel repo (ID):
   si prendono dalla conversazione, dalla lista degli artifact o dalla scheda `Motore`.

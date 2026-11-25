@@ -80,7 +80,12 @@ function ritmoEngineTick_() {
       p.deleteProperty(failKey);
     } catch (e) {
       p.setProperty(failKey, String(Date.now()));
-      eLog_('errore ' + j.id + ': ' + e.message);
+      // Permesso Google mancante (es. mail mai autorizzata): riprovare ogni ora non serve, si chiude il giorno
+      // con un solo messaggio che dice cosa fare.
+      if (!j.every && /autorizzazion|permission|authoriz/i.test(e.message)) {
+        p.setProperty(doneKey, day);
+        eLog_('serve un permesso per ' + j.id + ': nello script esegui ritmoAutorizza una volta');
+      } else eLog_('errore ' + j.id + ': ' + e.message);
     }
   });
 
@@ -127,6 +132,8 @@ function eWriteStatus_() {
     ['sezione e larghezza schermo', seen ? (seen.view + ' · ' + (seen.w || '') + ' px') : ''],
     ['righe SwitchBot', count(ss.getSheets()[0].getName())],
     ['righe Garmin', count('Garmin')], ['righe Attivita', count('Attivita')], ['righe Renpho', count('Renpho')], ['righe Umore', count('Umore')],
+    ['aria camera adesso', eAirNow_(ss)],
+    ['aria camera notte scorsa', eAirNight_(ss)],
     ['errori recenti', st.errors.map(e => e[0] + ' ' + e[1]).join(' | ')],
     ['registro', st.log.map(e => e[0] + ' ' + e[1]).join(' | ')]
   ];
@@ -176,4 +183,32 @@ function eStatus_() {
   const log = JSON.parse(p.getProperty('ENGINE_LOG') || '[]');
   return { last: p.getProperty('ENGINE_LAST') || '', code: p.getProperty('RITMO_MD5') || '', updated: p.getProperty('RITMO_UPDATED') || '',
     errors: log.filter(l => /errore|fallita/.test(l[1])).slice(-5), log: log.slice(-8) };
+}
+
+/** Righe valide del log SwitchBot (umidità > 0) degli ultimi `hours`, per la scheda Motore. */
+function eAirRows_(ss, hours) {
+  const sh = ss.getSheets()[0], n = Math.min(sh.getLastRow() - 1, Math.ceil(hours * 6) + 12);
+  if (n <= 0) return [];
+  const since = Utilities.formatDate(new Date(Date.now() - hours * 3600000), E_TZ, 'yyyy-MM-dd HH:mm');
+  return sh.getRange(sh.getLastRow() - n + 1, 1, n, 4).getValues()
+    .map(r => [r[0] instanceof Date ? Utilities.formatDate(r[0], E_TZ, 'yyyy-MM-dd HH:mm') : String(r[0]).slice(0, 16), +r[1], +r[2], +r[3]])
+    .filter(r => r[0] >= since && r[2] > 0);
+}
+
+/** "2026-11-25 08:35 · 19,5 °C · 52 % · CO2 534 ppm": l'ultima lettura valida, per chi legge il foglio da fuori. */
+function eAirNow_(ss) {
+  const r = eAirRows_(ss, 2).pop();
+  return r ? r[0] + ' · ' + String(r[1]).replace('.', ',') + ' °C · ' + r[2] + ' % · CO2 ' + r[3] + ' ppm' : 'nessuna lettura valida nelle ultime 2 ore';
+}
+
+/** Riepilogo della notte (22-8): CO2 media e massima, temperatura media, minuti sopra 1000 ppm. */
+function eAirNight_(ss) {
+  const now = new Date(), h = +Utilities.formatDate(now, E_TZ, 'H');
+  const end = h >= 8 ? Utilities.formatDate(now, E_TZ, 'yyyy-MM-dd') : Utilities.formatDate(new Date(now.getTime() - 86400000), E_TZ, 'yyyy-MM-dd');
+  const start = Utilities.formatDate(new Date(new Date(end + 'T12:00:00Z').getTime() - 86400000), E_TZ, 'yyyy-MM-dd');
+  const rows = eAirRows_(ss, 40).filter(r => r[0] >= start + ' 22:00' && r[0] <= end + ' 08:00');
+  if (!rows.length) return 'nessuna lettura valida per la notte ' + start + ' / ' + end;
+  const avg = a => a.reduce((s, x) => s + x, 0) / a.length, co2 = rows.map(r => r[3]);
+  return 'notte ' + start.slice(8) + '/' + end.slice(8) + ' · CO2 media ' + Math.round(avg(co2)) + ' ppm, massima ' + Math.max.apply(null, co2) +
+    ', sopra 1000 per ' + co2.filter(x => x > 1000).length * 10 + ' min · temperatura media ' + avg(rows.map(r => r[1])).toFixed(1).replace('.', ',') + ' °C · ' + rows.length + ' letture';
 }
