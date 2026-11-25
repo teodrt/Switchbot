@@ -54,6 +54,11 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
   `wk` report, `e` pianificatore.
 - Rischio accettato dall'utente (17/11/2026): il codice di `main` gira con il suo account Google e
   vede le chiavi nelle proprietà. Le chiavi non vanno mai nel repo.
+- **Permessi Google**: lo script ottiene solo i permessi che Google vede nei file del progetto (Motore), non nel codice
+  scaricato. Per mail (promemoria, report) serve aver eseguito una volta `ritmoAutorizza` (in `motore.gs`). Se un
+  lavoro fallisce per un permesso mancante, il pianificatore chiude il giorno con un solo messaggio nel registro.
+- La scheda `Motore` ha anche **"aria camera adesso"** e **"aria camera notte scorsa"** (CO2 media e massima, minuti
+  sopra 1000, temperatura): chi legge il foglio da fuori (altre chat, report) usa queste righe, non l'inizio del log.
 - Il connettore Google Drive permette a Claude di leggere il progetto (`download_file_content` con
   `application/vnd.google-apps.script+json`) per controllare, non di modificarlo.
 - **Diagnosi senza aprire l'app** (l'app è privata, Claude non può aprirla): a ogni giro il motore
