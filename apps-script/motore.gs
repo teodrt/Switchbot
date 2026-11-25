@@ -99,11 +99,13 @@ function ritmoInstall() {
 
 /**
  * Da eseguire una volta a mano se il registro dice "serve un permesso": Google concede a uno script solo i
- * permessi che vede nei suoi file, e il codice scaricato da GitHub non conta. Queste due righe gli fanno
- * chiedere il permesso di mandare mail (promemoria e report) e di leggere la tua email (destinatario).
+ * permessi che vede nei suoi file, e il codice scaricato da GitHub non conta. Queste righe gli fanno chiedere
+ * il permesso di mandare mail (promemoria, report, mail della sera), di leggere la tua email (destinatario)
+ * e di leggere il calendario (fisio e serate: solo sì/no e orari, mai i titoli degli eventi).
  */
 function ritmoAutorizza() {
-  Logger.log('Mail ancora disponibili oggi: ' + MailApp.getRemainingDailyQuota() + ' · destinatario: ' + Session.getEffectiveUser().getEmail());
+  Logger.log('Mail ancora disponibili oggi: ' + MailApp.getRemainingDailyQuota() + ' · destinatario: ' + Session.getEffectiveUser().getEmail() +
+    ' · calendario: ' + CalendarApp.getDefaultCalendar().getName());
 }
 
 // ---- caricamento del codice ----

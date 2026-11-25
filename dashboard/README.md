@@ -40,6 +40,21 @@ Sopra il contagiri c'è sempre la notte a cui si riferisce (in giallo se non è 
 Caselle "Ieri e stanotte" nel check-in (fisio, antidolorifico, alcol, caffè dopo le 15, cena tardi, finestra aperta):
 ognuna entra nell'analisi come fattore (notti con contro notti senza).
 
+## Contesto: dolore, ora ideale, meteo, calendario, corpo
+
+- **Dolore** (Oggi): check-in degli ultimi 30 giorni, con sotto fisio (check-in o calendario), antidolorifico e
+  notti con score sotto 60. Tendenza (Theil-Sen, almeno 5 check-in in 3 settimane): in calo, stabile, in aumento.
+- **Ora ideale** (Sonno, Stasera, mail della sera): `nBedWindow_`, 25°-75° percentile dell'ora di inizio sonno
+  nel terzo migliore delle ultime 90 notti (finestra 30-90 minuti), score medio dentro e fuori, serie di notti di fila.
+- **Meteo fuori** (Casa): notte per notte da Open-Meteo, con la camera a confronto. Fattori dell'analisi:
+  temperatura esterna della notte, variazione della pressione in 24 ore.
+- **Calendario**: fisio (conta solo se in calendario ci sono sedute) e serate con impegni dopo le 21 come fattori.
+- **Tendenza della composizione** (Corpo, e storia in Oggi se serve): pendenza robusta di grasso e muscoli sugli
+  ultimi 60 giorni (almeno 4 pesate); avviso se il grasso sale più di 0,5 punti al mese o i muscoli calano
+  per 3 pesate di fila.
+- **Mail della sera** (21:30): aria della camera adesso e fuori, cosa sistemare (temperatura, CO2, umidità, notte
+  precedente sopra 1000), ora ideale, esperimento in corso.
+
 ## Ritorno allo sport
 
 In Sport (e come link nel riquadro del recupero): HRV, battito a riposo (invertito) e sonno profondo, mediana delle

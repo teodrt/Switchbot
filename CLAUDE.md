@@ -42,7 +42,9 @@ costruire o analizzare, eventualmente un'attività programmata per i report peri
 - **Un solo trigger**: `ritmoTick` ogni 10 minuti. `engine.gs` decide i lavori (`E_JOBS`: SwitchBot a
   ogni giro, Garmin dalle 7:30 ogni 30 minuti finché non arriva la notte appena passata (al massimo fino alle 13),
   Renpho dopo le 11, promemoria del check-in via mail appena arriva la notte da Garmin (dalle 7; alle 12 se la
-  notte non arriva; una volta al giorno; niente se il check-in è fatto), report il lunedì dopo le 8:40), le operazioni una
+  notte non arriva; una volta al giorno; niente se il check-in è fatto), calendario alle 6:30 (fisio e serate dopo le 21,
+  `context.gs`), meteo della notte alle 7:15 (Open-Meteo, solo se nell'app è scelta la città), mail della sera alle 21:30
+  (aria adesso, cosa sistemare, ora ideale, esperimento), report il lunedì dopo le 8:40), le operazioni una
   tantum (`E_MIGRATIONS`, una per giro, registrate in `MIGRATIONS_DONE`) e rimuove ogni altro trigger.
   Un lavoro fallito si riprova dopo un'ora. Registro in `ENGINE_LOG`, mostrato nell'app (Insight).
 - Per cambiare il codice di raccolta: modificare i `.gs` su `main`. Niente da incollare. Un nuovo file
@@ -167,11 +169,13 @@ apps-script/motore.gs     motore fisso (file "Motore" nel progetto): scarica ed 
 apps-script/engine.json   elenco dei file scaricati dal motore
 apps-script/engine.gs     pianificatore: lavori, migrazioni, trigger, stato
 apps-script/switchbot.gs  logger SwitchBot (ogni 10 minuti)
-apps-script/garmin.gs     import Garmin (ogni giorno alle 10)
+apps-script/garmin.gs     import Garmin (dalle 7:30 finché non arriva la notte)
+apps-script/context.gs    calendario (fisio, serate tardi: solo sì/no e orari) e meteo della notte (Open-Meteo)
+apps-script/air.gs        aria della camera condivisa con una seconda persona
 apps-script/renpho.gs     import Renpho (ogni giorno alle 11, API non ufficiale)
 apps-script/dashboard.gs  web app Ritmo: legge il foglio e prepara i dati (nBuild_ è pura, provabile in Node);
                           ritmoSaveCheckin salva il check-in (chiamata dall'app con google.script.run)
-apps-script/report.gs     report settimanale via email (lunedì 8:40), wkBuild_ è pura
+apps-script/report.gs     report settimanale (lunedì 8:40) e mail della sera (21:30); wkBuild_ e wkEveningBuild_ sono pure
 apps-script/ritmo.html    caricatore della web app (DATA dal foglio + app da jsDelivr)
 app/ritmo.js              interfaccia dell'app e motore di analisi (pubblicata da main)
 app/ritmo.css             stile dell'app
