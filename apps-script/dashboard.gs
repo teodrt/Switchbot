@@ -30,13 +30,80 @@ function nData_() {
   const fmt = v => (v instanceof Date) ? Utilities.formatDate(v, N_TZ, 'yyyy-MM-dd HH:mm') : v;
   const cell = v => !(v instanceof Date) ? v : v.getFullYear() < 1900 ? Utilities.formatDate(v, N_TZ, 'HH:mm') : Utilities.formatDate(v, N_TZ, 'yyyy-MM-dd');
   const vals = sh => sh ? sh.getDataRange().getValues().map(r => [fmt(r[0])].concat(r.slice(1).map(cell))) : [];
-  const out = nBuild_(vals(ss.getSheets()[0]), vals(ss.getSheetByName('Garmin')),
-    vals(ss.getSheetByName('Renpho')), Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd HH:mm'));
-  out.activities = nActivities_(vals(ss.getSheetByName('Attivita')));
-  out.mood = nMood_(vals(ss.getSheetByName(N_MOOD_TAB)));
-  out.settings = nSettings_();
+  const S = { sb: vals(ss.getSheets()[0]) };
+  ['Garmin', 'Renpho', 'Attivita', N_MOOD_TAB, 'Calendario', 'Meteo'].forEach(n => { S[n] = vals(ss.getSheetByName(n)); });
+  const out = nAssemble_(S, Utilities.formatDate(new Date(), N_TZ, 'yyyy-MM-dd HH:mm'), nSettings_());
   try { out.engine = typeof eStatus_ === 'function' ? eStatus_() : null; } catch (e) { out.engine = null; }
   return out;
+}
+
+/**
+ * Funzione pura: righe di tutte le schede -> DATA per l'app. La usano sia la web app (nData_) sia
+ * l'anteprima live (tools/live-preview.py), così vedono sempre gli stessi dati.
+ * S = { sb, Garmin, Renpho, Attivita, Umore, Calendario, Meteo } (righe con intestazione).
+ */
+function nAssemble_(S, now, settings) {
+  const out = nBuild_(S.sb || [], S.Garmin || [], S.Renpho || [], now);
+  out.activities = nActivities_(S.Attivita || []);
+  out.mood = nMood_(S[N_MOOD_TAB] || []);
+  out.settings = settings || {};
+  out.calendar = nCal_(S.Calendario || []);
+  out.weather = nMeteo_(S.Meteo || []);
+  out.bedWindow = nBedWindow_(out.nights);
+  return out;
+}
+
+/** Scheda Calendario -> { 'yyyy-MM-dd': { fisio, sera, last, n } } (giorno dell'impegno). */
+function nCal_(rows) {
+  const out = {};
+  if (rows.length < 2) return out;
+  const h = {}; rows[0].forEach((n, i) => { h[String(n).trim()] = i; });
+  rows.slice(1).forEach(r => {
+    const d = String(r[h.date] || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    out[d] = { fisio: +r[h.fisio] === 1, sera: +r[h.sera] === 1, last: String(r[h.fine_ultimo] || '').slice(0, 5), n: +r[h.eventi] || 0 };
+  });
+  return out;
+}
+
+/** Scheda Meteo -> { 'yyyy-MM-dd' (risveglio): { t, rh, p, dp, tmax } }. */
+function nMeteo_(rows) {
+  const out = {};
+  if (rows.length < 2) return out;
+  const h = {}; rows[0].forEach((n, i) => { h[String(n).trim()] = i; });
+  const num = v => typeof v === 'number' && isFinite(v) ? v : (typeof v === 'string' && v.trim() !== '' && isFinite(+v.replace(',', '.')) ? +v.replace(',', '.') : null);
+  rows.slice(1).forEach(r => {
+    const d = String(r[h.date] || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    out[d] = { t: num(r[h.t_notte]), rh: num(r[h.rh_notte]), p: num(r[h.p_notte]), dp: num(r[h.dp24]), tmax: num(r[h.t_max]) };
+  });
+  return out;
+}
+
+/**
+ * La tua ora ideale per addormentarti: tra il 25° e il 75° percentile dell'ora delle tue notti migliori
+ * (terzo più alto per sleep score, ultime 90 notti, almeno 14), larga tra 30 e 90 minuti, arrotondata a 5.
+ * Con lo score medio delle notti dentro e fuori, e la serie di notti di fila dentro la finestra.
+ */
+function nBedWindow_(nights) {
+  const bm = s => { if (!/^\d{2}:\d{2}$/.test(s || '')) return null; const m = +s.slice(0, 2) * 60 + +s.slice(3, 5); return m >= 720 ? m - 1440 : m; };
+  const all = (nights || []).filter(n => typeof n.score === 'number' && bm(n.bed_start) !== null).slice(-90);
+  if (all.length < 14) return null;
+  const top = all.slice().sort((a, b) => b.score - a.score).slice(0, Math.max(5, Math.round(all.length / 3)));
+  const q = (a, p) => { const s = a.slice().sort((x, y) => x - y), i = (s.length - 1) * p, lo = Math.floor(i); return s[lo] + (s[Math.ceil(i)] - s[lo]) * (i - lo); };
+  const tb = top.map(n => bm(n.bed_start)), med = q(tb, .5);
+  let a = q(tb, .25), b = q(tb, .75);
+  if (b - a < 30) { a = med - 15; b = med + 15; }
+  if (b - a > 90) { a = med - 45; b = med + 45; }
+  a = Math.round(a / 5) * 5; b = Math.round(b / 5) * 5;
+  const inside = n => { const m = bm(n.bed_start); return m >= a && m <= b; };
+  const mean = xs => xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length * 10) / 10 : null;
+  const ins = all.filter(inside), outs = all.filter(n => !inside(n));
+  let streak = 0; for (let i = all.length - 1; i >= 0 && inside(all[i]); i--) streak++;
+  const clock = m => { const x = ((m % 1440) + 1440) % 1440; return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); };
+  return { from: clock(a), to: clock(b), fromMin: a, toMin: b, nTop: top.length, nAll: all.length,
+    inAvg: mean(ins.map(n => n.score)), outAvg: mean(outs.map(n => n.score)), inN: ins.length, outN: outs.length, streak: streak,
+    last: all.slice(-7).map(n => ({ date: n.date, bed: n.bed_start, ok: inside(n) })) };
 }
 
 const N_MOOD_TAB = 'Umore';
@@ -105,6 +172,13 @@ function ritmoSaveCheckin(c) {
   if (c && c.settings) {
     const st = nSettings_(), s = c.settings, isDay = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
     if ('op_date' in s) { if (isDay(s.op_date)) st.op_date = s.op_date; else delete st.op_date; }
+    if (s.city) {   // città per il meteo: posizione arrotondata, poi subito lo storico delle notti
+      st.place = cxGeocode_(s.city);
+      PropertiesService.getScriptProperties().setProperty('APP_SETTINGS', JSON.stringify(st));
+      let weather = {};
+      try { cxWeatherDaily(); weather = cxWeatherMap_(); } catch (e) { weather = {}; }
+      return Object.assign({}, st, { weather: weather });
+    }
     if ('hide' in s) st.hide = (s.hide || []).filter(x => N_FEATURES.indexOf(x) >= 0);   // riquadri che la persona non vuole vedere
     if (s.exp_start && N_EXPS.indexOf(s.exp_start.id) >= 0 && isDay(s.exp_start.start))
       st.exps = (st.exps || []).filter(e => e.start !== s.exp_start.start).concat([{ id: s.exp_start.id, start: s.exp_start.start }]).slice(-12);

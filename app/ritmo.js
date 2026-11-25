@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '19 nov 2026 · v5.7.1';
+  const RELEASE = '26 nov 2026 · v5.8';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -60,11 +60,11 @@
   const bedMin = s => { if (!/^\d{2}:\d{2}$/.test(s || '')) return null; const m = +s.slice(0, 2) * 60 + +s.slice(3, 5); return m >= 720 ? m - 1440 : m; };
   // Caselle del check-in: cosa hai fatto ieri e stanotte (si collegano alla notte appena passata).
   const TAGS = [['fisio', 'Fisio', 'fisioterapia del giorno prima', 'dopo la fisio', 'senza fisio', 'Dopo la fisioterapia'],
-    ['antidolorifico', 'Antidolorifico', 'antidolorifico', 'con antidolorifico', 'senza', 'Con l\'antidolorifico'],
+    ['antidolorifico', 'Antidolorifico', 'antidolorifico', 'con antidolorifico', 'senza antidolorifico', 'Con l\'antidolorifico'],
     ['alcol', 'Alcol', 'alcol la sera prima', 'dopo alcol', 'senza alcol', 'Dopo aver bevuto alcol'],
-    ['caffe', 'Caffè dopo le 15', 'caffè dopo le 15', 'caffè tardi', 'senza', 'Con il caffè dopo le 15'],
-    ['cena', 'Cena tardi', 'cena tardi', 'cena tardi', 'cena presto', 'Dopo una cena tardi'],
-    ['finestra', 'Finestra aperta', 'finestra aperta di notte', 'finestra aperta', 'chiusa', 'Con la finestra aperta']];
+    ['caffe', 'Caffè dopo le 15', 'caffè dopo le 15', 'con caffè tardi', 'senza caffè tardi', 'Con il caffè dopo le 15'],
+    ['cena', 'Cena tardi', 'cena tardi', 'dopo una cena tardi', 'dopo una cena presto', 'Dopo una cena tardi'],
+    ['finestra', 'Finestra aperta', 'finestra aperta di notte', 'con la finestra aperta', 'con la finestra chiusa', 'Con la finestra aperta']];
   const tagName = k => (TAGS.find(t => t[0] === k) || [k, k])[1];
   const absToDate = m => new Date(m * 60000);
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -117,6 +117,10 @@
   const byDate = {}; nights.forEach(n => { byDate[n.date] = n; });
   const gNights = nights.filter(n => isNum(n.score));
   const body = DATA.body || [];
+  // Contesto: calendario (giorno dell'impegno), meteo (notte, data del risveglio), ora ideale per dormire.
+  const CAL = DATA.calendar || {}, WX = DATA.weather = DATA.weather || {}, BW = DATA.bedWindow || null;
+  const calFisio = Object.keys(CAL).some(d => CAL[d].fisio);   // il calendario conta per la fisio solo se ci sono sedute segnate
+  const theil = pts => { const sl = []; for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) { const dx = pts[j][0] - pts[i][0]; if (dx > 0) sl.push((pts[j][1] - pts[i][1]) / dx); } return sl.length ? median(sl) : null; };
   const L = DATA.last;
   const today = (DATA.now || '').slice(0, 10) || (L && L.date);
   const ACTS = (DATA.activities || []).map(a => ({ date: a[0], time: a[1], type: a[2], name: a[3], min: a[4], km: a[5], hr: a[6], hrMax: a[7], kcal: a[8], te: a[9], ane: a[10], load: a[11], vo2: a[12] }));
@@ -186,8 +190,15 @@
       { id: 'rh', label: 'umidità della camera', axis: 'umidità camera (%)', get: n => n.air ? n.air.rh_avg : null, show: v => fmt(v) + ' %', room: true, when: 'Con aria più umida', hiP: v => 'l\'umidità è almeno al ' + fmt(v) + ' %', loP: v => 'è al massimo al ' + fmt(v) + ' %' },
       { id: 'sscore', label: 'sleep score della notte', axis: 'sleep score della notte', get: n => n.score, show: v => fmt(v), only: MOODO, when: 'Dopo notti migliori', hiP: v => 'lo sleep score è almeno ' + fmt(v), loP: v => 'è al massimo ' + fmt(v) },
       { id: 'shrv', label: 'HRV della notte', axis: 'HRV della notte (ms)', get: n => n.hrv, show: v => fmt(v) + ' ms', only: MOODO, when: 'Con HRV più alta', hiP: v => 'l\'HRV è almeno ' + fmt(v) + ' ms', loP: v => 'è al massimo ' + fmt(v) + ' ms' },
-      ...TAGS.map(t => ({ id: 'tag_' + t[0], label: t[2], get: n => MB[n.date] ? ((MB[n.date].tags || []).indexOf(t[0]) >= 0 ? 1 : 0) : null, binary: true, hiName: t[3], loName: t[4], when: t[5] })),
-      { id: 'weekend', label: 'notti del weekend', get: n => { const w = dow(n.date); return w === 6 || w === 0 ? 1 : 0; }, binary: true, hiName: 'weekend', loName: 'in settimana', when: 'Nel weekend' }
+      ...TAGS.map(t => ({ id: 'tag_' + t[0], label: t[2], get: n => {
+        const m = MB[n.date], c = t[0] === 'fisio' && calFisio ? CAL[addDays(n.date, -1)] : null;
+        if (c && c.fisio) return 1;
+        if (m) return (m.tags || []).indexOf(t[0]) >= 0 ? 1 : 0;
+        return c ? 0 : null; }, binary: true, hiName: t[3], loName: t[4], when: t[5] })),
+      { id: 'sera', label: 'impegni dopo le 21 il giorno prima', get: n => { const c = CAL[addDays(n.date, -1)]; return c ? (c.sera ? 1 : 0) : null; }, binary: true, hiName: 'dopo una serata con impegni', loName: 'dopo una serata libera', when: 'Dopo una serata con impegni dopo le 21' },
+      { id: 'out_t', label: 'temperatura esterna della notte', axis: 'temperatura fuori (°C)', get: n => WX[n.date] && isNum(WX[n.date].t) ? WX[n.date].t : null, show: v => fmt(v, 1) + ' °C', when: 'Con le notti più calde fuori', hiP: v => 'fuori di notte ci sono almeno ' + fmt(v, 1) + ' °C', loP: v => 'al massimo ' + fmt(v, 1) + ' °C' },
+      { id: 'p_dp', label: 'variazione della pressione in 24 ore', axis: 'variazione pressione (hPa)', get: n => WX[n.date] && isNum(WX[n.date].dp) ? WX[n.date].dp : null, show: v => (v > 0 ? '+' : '') + fmt(v, 1) + ' hPa', when: 'Con la pressione in salita', hiP: v => 'la pressione cambia di ' + (v > 0 ? '+' : '') + fmt(v, 1) + ' hPa o più in 24 ore', loP: v => 'di ' + (v > 0 ? '+' : '') + fmt(v, 1) + ' hPa o meno' },
+      { id: 'weekend', label: 'notti del weekend', get: n => { const w = dow(n.date); return w === 6 || w === 0 ? 1 : 0; }, binary: true, hiName: 'nel weekend', loName: 'in settimana', when: 'Nel weekend' }
     ];
     const OUTCOMES = [
       { id: 'score', label: 'sleep score', the: 'lo sleep score', get: n => n.score, dec: 0, unit: '', better: 1 },
@@ -252,7 +263,7 @@
   const findingTitle = t => `${t.f.when}: ${t.o.label} più ${t.dir > 0 ? 'alto' : 'basso'}` + (t.f.binary ? ` di ${fmt(Math.abs(t.effect), t.o.dec)}${t.o.unit}` : '');
   const findingBody = t => {
     const lo = t.groups[0], hi = t.groups[t.groups.length - 1];
-    return t.f.binary ? `In media ${fmt(hi.v, t.o.dec)}${t.o.unit} nel ${t.f.hiName} (${hi.n} notti) contro ${fmt(lo.v, t.o.dec)}${t.o.unit} ${t.f.loName} (${lo.n}).`
+    return t.f.binary ? `In media ${fmt(hi.v, t.o.dec)}${t.o.unit} ${t.f.hiName} (${hi.n} notti) contro ${fmt(lo.v, t.o.dec)}${t.o.unit} ${t.f.loName} (${lo.n}).`
       : `Quando ${t.f.hiP(t.cuts[1])}, ${t.o.the} è in media ${fmt(hi.v, t.o.dec)}${t.o.unit}; quando ${t.f.loP(t.cuts[0])}, ${fmt(lo.v, t.o.dec)}${t.o.unit}.`;
   };
 
@@ -577,7 +588,7 @@
   const moodLevel = (v, hi) => !isNum(v) ? '' : hi ? (v >= 4 ? 'good' : v >= 3 ? 'warn' : 'bad') : (v <= 2 ? 'good' : v <= 5 ? 'warn' : 'bad');
   const diaryRow = (d, m) => m
     ? `<button class="drow" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span>
-        <span class="dv"><span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span><span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span><span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span>${(m.tags || []).map(t => '<span class="pill">' + esc(tagName(t)) + '</span>').join('')}</span>
+        <span class="dv"><span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span><span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span><span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span>${(m.tags || []).map(t => '<span class="pill">' + esc(tagName(t)) + '</span>').join('')}${(m.tags || []).indexOf('fisio') < 0 && CAL[addDays(d, -1)] && CAL[addDays(d, -1)].fisio ? '<span class="pill">Fisio (calendario)</span>' : ''}</span>
         ${m.note ? `<span class="dn">“${esc(m.note)}”</span>` : ''}</button>`
     : `<button class="drow miss" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span><span class="dv faint">nessun check-in · <span class="more">aggiungi +</span></span></button>`;
   const bindDiary = el => el.querySelectorAll('.drow').forEach(b => { b.onclick = e => { e.stopPropagation(); buzz(); openCheckin(null, b.dataset.day); }; });
@@ -709,7 +720,8 @@
   const saveSettings = (st, done) => {
     const run = window.google && google.script && google.script.run;
     if (!run) { toast('Anteprima: il salvataggio funziona solo nell\'app Ritmo'); return; }
-    run.withSuccessHandler(r => { Object.keys(SETTINGS).forEach(k => delete SETTINGS[k]); Object.assign(SETTINGS, r || {}); toast('Salvato'); if (done) done(); rerender(); })
+    run.withSuccessHandler(r => { r = r || {}; if (r.weather) { Object.keys(WX).forEach(k => delete WX[k]); Object.assign(WX, r.weather); delete r.weather; ANALYSIS = null; }
+        Object.keys(SETTINGS).forEach(k => delete SETTINGS[k]); Object.assign(SETTINGS, r); toast('Salvato'); if (done) done(); rerender(); })
       .withFailureHandler(err => toast('Non salvato: ' + (err && err.message ? err.message : 'errore'))).ritmoSaveCheckin({ settings: st });
   };
   // Parti dell'app che ognuno può nascondere (impostazione sul proprio account, APP_SETTINGS.hide).
@@ -840,11 +852,100 @@
     if (st) { t = st.x.how; why = 'Esperimento "' + st.x.t + '", notte ' + Math.min(7, st.night + 1) + ' di 7.'; }
     else if (rm && isNum(rm.temp) && rm.temp > 20.5) { t = 'Camera a ' + fmt(rm.temp, 1) + ' °C: abbassala di 2-3 gradi prima di dormire.'; why = 'Sotto i 20 °C di solito il sonno profondo aumenta.'; exp = 'temp'; }
     else if (rm && isNum(rm.co2) && rm.co2 > 800) { t = 'CO2 a ' + fmt(rm.co2) + ' ppm: socchiudi la finestra o la porta stanotte.'; why = 'Con la CO2 sotto 800 ppm l\'aria della notte resta fresca.'; exp = 'co2'; }
+    else if (BW) { t = 'Prova ad addormentarti tra le ' + BW.from + ' e le ' + BW.to + '.'; why = 'È la finestra delle tue notti migliori' + (BW.streak ? ': sei a ' + BW.streak + (BW.streak === 1 ? ' notte' : ' notti') + ' di fila.' : '.'); exp = 'bed'; }
     else { t = 'Cerca di addormentarti entro le 23.'; why = 'Un orario regolare aiuta HRV e recupero.'; exp = 'bed'; }
     c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Stasera</span>${st ? `<span class="muted small">esperimento</span>` : '<button class="more" id="tHide">nascondi</button>'}</div><p style="font-weight:600">${esc(t)}</p><p class="small muted">${esc(why)}</p>
       ${st ? expMarks(st) : exp ? `<button class="more" id="tExp">Prova per 7 notti ›</button>` : ''}`;
     const b = $('#tExp', c); if (b) b.onclick = e => { e.stopPropagation(); buzz(); startExp(exp); };
     const th = $('#tHide', c); if (th) th.onclick = e => { e.stopPropagation(); buzz(); setHidden('tonight', true); };
+    return c;
+  };
+
+  // Dolore giorno per giorno (check-in del mattino) con sotto gli eventi: fisio (dal check-in di oggi = ieri,
+  // o dal calendario), antidolorifico (ieri o stanotte) e notti con sleep score sotto 60.
+  const painCard = () => {
+    const pm = MOOD.filter(m => isNum(m.pain)).sort((a, b) => a.date < b.date ? -1 : 1);
+    if (!pm.length) return null;
+    const x1 = dayNum(today), x0 = x1 - 30, inR = d => dayNum(d) >= x0 && dayNum(d) <= x1;
+    const fis = new Set(), anti = new Set();
+    MOOD.forEach(m => { (m.tags || []).forEach(t => { const d = addDays(m.date, -1); if (t === 'fisio') fis.add(d); if (t === 'antidolorifico') anti.add(d); }); });
+    if (calFisio) Object.keys(CAL).forEach(d => { if (CAL[d].fisio) fis.add(d); });
+    const bad = gNights.filter(n => n.score < 60 && inR(n.date)).map(n => n.date);
+    const ev = (set, y) => Array.from(set).filter(inR).sort().map(d => [dayNum(d), y, d]);
+    const pts = pm.filter(m => inR(m.date)).map(m => [dayNum(m.date), m.pain, m.date]);
+    const c = h('section', 'card'); paint(c, 'insight');
+    const rec = pm.filter(m => dayNum(m.date) > x1 - 21).map(m => [dayNum(m.date), m.pain]);
+    const sl = rec.length >= 5 ? theil(rec) : null, wk = isNum(sl) ? sl * 7 : null;
+    const trend = !isNum(wk) ? `servono almeno 5 check-in in 3 settimane per la tendenza (ne hai ${rec.length})`
+      : Math.abs(wk) < .3 ? 'stabile nelle ultime 3 settimane' : wk < 0 ? `in calo di ${fmt(-wk, 1)} punti a settimana` : `in aumento di ${fmt(wk, 1)} punti a settimana`;
+    c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Dolore</span><span class="pill ${!isNum(wk) ? '' : wk < -.3 ? 'good' : wk > .3 ? 'bad' : ''}">${isNum(wk) ? (wk < -.3 ? 'in calo' : wk > .3 ? 'in aumento' : 'stabile') : pm.length + ' check-in'}</span></div>
+      <p class="small muted">Ultimi 30 giorni, da 0 a 10: ${trend}.</p>`;
+    const MB2 = moodBy();
+    lineChart(c, { h: 150, series: [
+        { data: pts, color: 'var(--c-insight)', w: 2.4, dots: 3.2 },
+        { data: ev(fis, -1), color: 'var(--c-sport)', line: false, dots: 3.4 },
+        { data: ev(anti, -1.9), color: 'var(--purple)', line: false, dots: 3.4 },
+        { data: bad.map(d => [dayNum(d), -2.8, d]), color: 'var(--c-sonno)', line: false, dots: 3.4 }],
+      yMin: -3.2, yMax: 10, yFmt: v => v < -.01 ? '' : fmt(Math.abs(v) < .01 ? 0 : v), xMin: x0, xMax: x1, xTicks: dateTicks, aria: 'Dolore e fisioterapia',
+      tip: p => { const d = p[2], n = byDate[d], m = MB2[d];
+        return `${dLabel(d)} · dolore <b>${fmt(p[1])}</b>/10` + (fis.has(addDays(d, -1)) ? ' · fisio ieri' : '') + (anti.has(addDays(d, -1)) ? ' · antidolorifico' : '') + (n && isNum(n.score) ? ' · notte ' + n.score : '') + (m && m.note ? '<br>“' + esc(m.note) + '”' : ''); } });
+    c.appendChild(h('div', 'legend', `<span><i class="sw" style="background:var(--c-insight)"></i>dolore</span><span><i class="sw dotsw" style="background:var(--c-sport)"></i>fisio</span><span><i class="sw dotsw" style="background:var(--purple)"></i>antidolorifico</span><span><i class="sw dotsw" style="background:var(--c-sonno)"></i>notte sotto 60</span>`));
+    return c;
+  };
+  // La tua ora ideale per addormentarti (calcolata in nBedWindow_) con le ultime 7 notti.
+  const bedCard = () => {
+    if (!BW) return null;
+    const c = h('section', 'card'); paint(c, 'sonno');
+    const diff = isNum(BW.inAvg) && isNum(BW.outAvg) ? BW.inAvg - BW.outAvg : null;
+    c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>La tua ora ideale</span><span class="pill ${BW.streak >= 3 ? 'good' : ''}">${BW.streak} ${BW.streak === 1 ? 'notte' : 'notti'} di fila</span></div>
+      <div class="mid">${BW.from} - ${BW.to}</div>
+      <p class="small muted">È quando inizia il sonno nelle tue notti migliori (${BW.nTop} su ${BW.nAll}). ${isNum(diff) ? `Notti iniziate in questa finestra: sleep score medio <b>${fmt(BW.inAvg)}</b> (${BW.inN}); fuori: <b>${fmt(BW.outAvg)}</b> (${BW.outN})${Math.abs(diff) < 3 ? ', differenza ancora piccola' : ''}.` : ''}</p>
+      <div class="xmarks">${BW.last.map(x => `<i class="${x.ok ? 'ok' : 'no'}"${tipAttr('<b>' + cap(GIORNI[dow(x.date)]) + ' ' + dLabel(x.date) + '</b><br>sonno iniziato alle ' + esc(x.bed) + (x.ok ? ', nella finestra' : ', fuori dalla finestra'))}></i>`).join('')}</div>
+      <p class="hint">Ultime 7 notti: verde se il sonno è iniziato nella finestra.</p>`;
+    return c;
+  };
+  // Meteo fuori: notte per notte (Open-Meteo), con la camera a confronto. Senza città: si sceglie qui.
+  const weatherCard = () => {
+    const c = h('section', 'card'); paint(c, 'casa');
+    const days = Object.keys(WX).sort(), place = SETTINGS.place;
+    const ask = () => {
+      c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Meteo fuori</span></div>
+        <p class="small muted">Scrivi la tua città: Ritmo prende temperatura e pressione delle notti (servizio meteo gratuito, posizione arrotondata a circa 1 km, salvata solo nel tuo script).</p>
+        <div class="row-wrap"><input type="text" id="cityIn" placeholder="Es. Barcellona" class="dinput" autocomplete="off"><button class="btn" id="citySave" style="padding:10px 16px;font-size:.9rem">Salva</button></div>`;
+      $('#citySave', c).onclick = e => { e.stopPropagation(); const v = $('#cityIn', c).value.trim(); if (!v) { toast('Scrivi una città'); return; } toast('Cerco la città e scarico il meteo...'); saveSettings({ city: v }); };
+    };
+    if (!days.length) { ask(); return c; }
+    const ld = days[days.length - 1], w = WX[ld], n = byDate[ld];
+    const pts = days.filter(d => dayNum(d) > dayNum(ld) - 30 && isNum(WX[d].t)).map(d => [dayNum(d), WX[d].t, d]);
+    const room = days.filter(d => dayNum(d) > dayNum(ld) - 30 && byDate[d] && byDate[d].air && isNum(byDate[d].air.temp_avg)).map(d => [dayNum(d), byDate[d].air.temp_avg, d]);
+    c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Meteo fuori</span><span class="muted small">notte del ${dLabel(ld)}${place ? ' · ' + esc(place.name) : ''}</span></div>
+      <div class="grid3">${stat('Fuori', fmt(w.t, 1), '°C', 'media 22-7', '')}${stat('Camera', n && n.air ? fmt(n.air.temp_avg, 1) : '-', '°C', 'stessa notte', n && n.air ? tempState(n.air.temp_avg) : '')}${stat('Pressione', fmt(w.p), 'hPa', isNum(w.dp) ? (w.dp > 0 ? '+' : '') + fmt(w.dp, 1) + ' in 24 h' : '', '')}</div>`;
+    if (pts.length >= 2) {
+      lineChart(c, { h: 140, series: [{ data: pts, color: 'var(--c-casa)', w: 2.2, dots: 2.4 }, { data: room, color: 'var(--c-oggi)', w: 1.8, dash: '4 3', dots: 2 }], xTicks: dateTicks, aria: 'Temperatura fuori e in camera',
+        tip: p => { const d = p[2], r = byDate[d] && byDate[d].air; return `${dLabel(d)} · fuori <b>${fmt(WX[d].t, 1)} °C</b>` + (r && isNum(r.temp_avg) ? ' · camera <b>' + fmt(r.temp_avg, 1) + ' °C</b>' : '') + (isNum(WX[d].p) ? ' · ' + fmt(WX[d].p) + ' hPa' : ''); } });
+      c.appendChild(h('div', 'legend', '<span><i class="sw" style="background:var(--c-casa)"></i>fuori, media della notte</span><span><i class="sw" style="background:var(--c-oggi)"></i>camera</span>'));
+    }
+    const ch = h('button', 'more', 'Cambia città'); ch.style.justifySelf = 'start'; ch.onclick = e => { e.stopPropagation(); ask(); }; c.appendChild(ch);
+    return c;
+  };
+  // Tendenza della composizione (ultimi 60 giorni, almeno 4 pesate): pendenza robusta (Theil-Sen) di grasso e muscoli.
+  // Avviso se il grasso sale più di 0,5 punti al mese o se i muscoli calano per 3 pesate di fila.
+  const bodyTrend = () => {
+    const lb = body[body.length - 1]; if (!lb) return null;
+    const rec = body.filter(b => dayNum(b.date) > dayNum(lb.date) - 60);
+    const fat = rec.filter(b => isNum(b.fat)).map(b => [dayNum(b.date), b.fat]), mus = rec.filter(b => isNum(b.muscle)).map(b => [dayNum(b.date), b.muscle]);
+    if (fat.length < 4) return null;
+    const fs = theil(fat) * 30, ms = mus.length >= 4 ? theil(mus) * 30 : null;
+    const m4 = mus.slice(-4), down3 = m4.length === 4 && m4[1][1] < m4[0][1] && m4[2][1] < m4[1][1] && m4[3][1] < m4[2][1];
+    return { n: rec.length, fat: fs, mus: ms, fatUp: fs > .5, musDown: down3 || (isNum(ms) && ms < -.5), down3: down3 };
+  };
+  const bodyCard = () => {
+    const t = bodyTrend(); if (!t) return null;
+    const c = h('section', 'card'); paint(c, 'corpo');
+    const sig = v => (v > 0 ? '+' : '') + fmt(v, 1);
+    c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Tendenza della composizione</span><span class="pill ${t.fatUp || t.musDown ? 'warn' : 'good'}">${t.fatUp || t.musDown ? 'da tenere d\'occhio' : 'stabile'}</span></div>
+      <div class="grid2">${stat('Grasso', sig(t.fat), 'punti/mese', t.fatUp ? 'in aumento' : 'sotto controllo', t.fatUp ? 'warn' : 'good')}${stat('Muscoli', isNum(t.mus) ? sig(t.mus) : '-', 'punti/mese', t.down3 ? 'in calo da 3 pesate' : t.musDown ? 'in calo' : 'sotto controllo', t.musDown ? 'warn' : 'good')}</div>
+      <p class="small muted">Ultimi 60 giorni, ${t.n} pesate, pendenza che ignora le singole pesate strane. La bilancia a bioimpedenza cambia molto con l'acqua: pesati sempre al mattino, a digiuno e prima di bere.</p>`;
     return c;
   };
 
@@ -885,11 +986,13 @@
     }
     v.appendChild(ci);
     if (featureOn('recovery')) v.appendChild(recoveryCard());
+    { const pc = painCard(); if (pc) v.appendChild(pc); }
     if (featureOn('tonight')) v.appendChild(tonightCard());
 
     // storie: note, scoperte, tendenze
     const an = analysis(); setBadge();
     const stories = nightNotes(L).map(n => ({ k: n.k, i: n.i, tag: 'Stanotte', t: n.t, tip: n.tip }));
+    { const bt = bodyTrend(); if (bt && (bt.fatUp || bt.musDown)) stories.push({ k: 'var(--warn)', i: 'corpo', tag: 'Corpo', t: `<strong>${bt.fatUp ? 'Massa grassa in aumento' : 'Muscoli in calo'}</strong>: ${bt.fatUp ? (bt.fat > 0 ? '+' : '') + fmt(bt.fat, 1) + ' punti al mese' : (bt.down3 ? 'calo in 3 pesate di fila' : fmt(bt.mus, 1) + ' punti al mese')} (${bt.n} pesate in 60 giorni).`, tip: 'Pesati sempre al mattino a digiuno: la bioimpedenza oscilla con l\'acqua.', go: 'corpo' }); }
     an.trends.slice(0, 2).forEach(tt => { const good = (tt.diff * tt.o.better) > 0; stories.push({ k: good ? 'var(--good)' : 'var(--warn)', i: tt.diff > 0 ? 'up' : 'down', tag: 'Tendenza', t: `<strong>${cap(tt.o.label)} ${tt.diff > 0 ? 'in aumento' : 'in calo'}</strong>: ${fmt(tt.now, tt.o.dec)}${tt.o.unit} nelle ultime 2 settimane, ${fmt(tt.was, tt.o.dec)}${tt.o.unit} prima.` }); });
     an.findings.slice(0, 3).forEach(t => { const good = (t.dir * t.o.better) > 0; stories.push({ k: 'var(--c-insight)', i: 'spark', tag: good ? 'Ti aiuta' : 'Ti penalizza', t: `<strong>${esc(findingTitle(t))}</strong>`, tip: esc(findingBody(t)), go: 'insight' }); });
     if (stories.length) {
@@ -1013,6 +1116,7 @@
     v.appendChild(card);
     const notes = nightNotes(n);
     if (notes.length) v.appendChild(h('section', 'card', notes.map(noteHTML).join('')));
+    { const bc = bedCard(); if (bc) v.appendChild(bc); }
     if (n.date <= today) {
       const c = h('section', 'card'); paint(c, 'insight');
       c.innerHTML = `<div class="chead"><span class="eyebrow"><i></i>Il mattino dopo</span><span class="muted xs">check-in</span></div><div class="diary">${diaryRow(n.date, moodBy()[n.date])}</div>`;
@@ -1167,6 +1271,7 @@
     comp.appendChild(h('div', 'hbar', [['Grasso', lb.fat, 40, '%'], ['Muscoli', lb.muscle, 60, '%'], ['Acqua', lb.water, 70, '%']].map(x => `<div class="line"><span class="muted">${x[0]}</span><div class="track"><i data-w="${isNum(x[1]) ? (100 * x[1] / x[2]).toFixed(0) : 0}%"></i></div><span class="v">${fmt(x[1], 1)} ${x[3]}</span></div>`).join('')));
     comp.appendChild(h('div', 'grid3', stat('BMI', fmt(lb.bmi, 1), '', lb.bmi < 25 ? 'nella norma' : lb.bmi < 30 ? 'sovrappeso' : 'alto', !isNum(lb.bmi) ? '' : lb.bmi < 25 ? 'good' : lb.bmi < 30 ? 'warn' : 'bad') + stat('Viscerale', fmt(lb.visfat), '', isNum(lb.visfat) && lb.visfat <= 9 ? 'nella norma' : 'alto', isNum(lb.visfat) ? (lb.visfat <= 9 ? 'good' : 'warn') : '') + stat('Ossa', fmt(lb.bone, 1), 'kg', '', '')));
     v.appendChild(comp);
+    { const bc = bodyCard(); if (bc) v.appendChild(bc); }
     const an = analysis();
     if (an.weight) { const up = an.weight.perMonth > 0, flat = Math.abs(an.weight.perMonth) < .2;
       v.appendChild(h('section', 'card', noteHTML({ s: flat ? 'good' : up ? 'warn' : 'good', i: up ? 'up' : 'down', t: flat ? '<strong>Peso stabile</strong> negli ultimi 6 mesi.' : `<strong>Peso ${up ? 'in aumento' : 'in calo'}</strong> di circa <span class="num">${fmt(Math.abs(an.weight.perMonth), 1)}</span> kg al mese negli ultimi 6 mesi.`, tip: `Stima robusta agli sbalzi su ${an.weight.n} pesate.` }))); }
@@ -1190,6 +1295,7 @@
         <div class="grid2" style="margin-top:14px">${stat('Temperatura', fmt(rm.temp, 1), '°C', 'per dormire 17-20', tempState(rm.temp))}${stat('Umidità', fmt(rm.rh), '%', 'ideale 40-60', rhState(rm.rh))}</div>`;
       v.appendChild(c);
     }
+    v.appendChild(weatherCard());
     if (hb) v.appendChild(h('section', 'card', `<div class="chead"><span class="eyebrow"><i></i>Seconda stanza</span></div><div class="grid3">${stat('Temperatura', fmt(hb.temp, 1), '°C', 'Hub 2', '')}${stat('Umidità', fmt(hb.rh), '%', '', rhState(hb.rh))}${stat('Luce', fmt(hb.light), '/20', '', '')}</div>`));
     const rec = DATA.recent || [];
     if (rec.length) {

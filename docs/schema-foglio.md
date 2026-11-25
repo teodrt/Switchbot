@@ -99,6 +99,31 @@ Check-in giornaliero scritto dall'app (`ritmoSaveCheckin` in `dashboard.gs`), un
 | F | `note` | testo libero, al massimo 280 caratteri |
 | G | `tags` | cosa hai fatto ieri e stanotte, separato da virgole: `fisio`, `antidolorifico`, `alcol`, `caffe` (dopo le 15), `cena` (tardi), `finestra` (aperta di notte) |
 
+## Scheda `Calendario`
+
+Scritta da `apps-script/context.gs` ogni mattina (la prima volta gli ultimi 90 giorni), una riga per giorno
+finito, dai calendari di proprietà dell'account. Mai titoli, luoghi o partecipanti.
+
+| Col | Nome | Valori |
+|---|---|---|
+| A | `date` | giorno dell'impegno |
+| B | `fisio` | 1 se un impegno contiene fisio, physio, riabilit, osteopat o kinesi |
+| C | `sera` | 1 se l'ultimo impegno finisce dopo le 21 |
+| D | `fine_ultimo` | ora di fine dell'ultimo impegno (HH:mm) |
+| E | `eventi` | numero di impegni (esclusi quelli di tutto il giorno e quelli rifiutati) |
+
+## Scheda `Meteo`
+
+Scritta da `apps-script/context.gs` ogni mattina (la prima volta gli ultimi 92 giorni) da Open-Meteo, solo se
+nell'app è stata scelta la città (posizione arrotondata in `APP_SETTINGS.place`). Una riga per notte finita.
+
+| Col | Nome | Valori |
+|---|---|---|
+| A | `date` | data del risveglio |
+| B-D | `t_notte`, `rh_notte`, `p_notte` | medie dalle 22 alle 7: °C, %, hPa |
+| E | `dp24` | pressione alle 7 meno pressione alle 7 del giorno prima (hPa) |
+| F | `t_max` | massima del giorno prima (°C) |
+
 ## Foglio separato "Ritmo - Aria camera" (solo se si condivide l'aria)
 
 Scritto ogni ora da `apps-script/air.gs` di chi ha il sensore, scheda `Aria`: `timestamp`, `temp_c`, `rh_pct`,

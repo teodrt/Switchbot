@@ -130,6 +130,52 @@ test('promemoria del check-in: solo dopo la notte (o alle 12), una volta, con il
   } finally { global.PropertiesService = saved.P; global.MailApp = saved.M; global.Session = saved.S; global.Utilities.formatDate = saved.F; }
 });
 
+test('calendario: solo sì/no e orari, fisio e serate riconosciute', () => {
+  const r = cxDayRow_('2026-11-20', [{ title: 'Fisioterapia ginocchio', start: '10:00', end: '11:00' }, { title: 'Cena', start: '20:30', end: '22:15' }]);
+  assert.deepStrictEqual(r, ['2026-11-20', 1, 1, '22:15', 2]);
+  assert.deepStrictEqual(cxDayRow_('2026-11-21', [{ title: 'Riunione', start: '09:00', end: '10:00' }]), ['2026-11-21', 0, 0, '10:00', 1]);
+  assert.deepStrictEqual(cxDayRow_('2026-11-22', []), ['2026-11-22', 0, 0, '', 0]);
+  const cal = nCal_([CX_CAL_HEADER, r, ['2026-11-21 00:00', '0', '0', '10:00', 1]]);
+  assert.strictEqual(cal['2026-11-20'].fisio, true); assert.strictEqual(cal['2026-11-21'].sera, false);
+});
+
+test('meteo: una riga per notte finita, niente previsioni', () => {
+  const time = [], T = [], RH = [], P = [];
+  ['2026-11-24', '2026-11-25', '2026-11-26'].forEach((d, k) => { for (let hh = 0; hh < 24; hh++) { time.push(d + 'T' + String(hh).padStart(2, '0') + ':00'); T.push(10 + k + hh / 10); RH.push(60); P.push(1010 + k * 2); } });
+  const rows = cxMeteoRows_({ hourly: { time: time, temperature_2m: T, relative_humidity_2m: RH, surface_pressure: P } }, '2026-11-26T08:00');
+  assert.deepStrictEqual(rows.map(r => r[0]), ['2026-11-25', '2026-11-26'], 'solo notti finite e complete');
+  assert.strictEqual(rows[1][4], 2, 'pressione +2 hPa in 24 ore');
+  assert(rows[0][5] !== '', 'massima del giorno prima');
+  assert.strictEqual(cxMeteoRows_({ hourly: { time: time, temperature_2m: T, relative_humidity_2m: RH, surface_pressure: P } }, '2026-11-26T06:00').length, 1, 'la notte di oggi alle 6 non è ancora finita');
+  const w = nMeteo_([CX_MET_HEADER].concat(rows)); assert(w['2026-11-26'].dp === 2);
+});
+
+test('ora ideale per dormire: finestra delle notti migliori, serie, poche notti = niente', () => {
+  const ns = [];
+  for (let i = 0; i < 30; i++) { const good = i % 2 === 0; ns.push({ date: '2026-10-' + String(i + 1).padStart(2, '0'), score: good ? 85 + (i % 5) : 60, bed_start: good ? '23:0' + (i % 5) : '00:4' + (i % 5) }); }
+  const bw = nBedWindow_(ns);
+  assert(bw && bw.from <= '23:05' && bw.to >= '23:00' && bw.from >= '22:30', JSON.stringify(bw && [bw.from, bw.to]));
+  assert(bw.inAvg > bw.outAvg); assert.strictEqual(bw.last.length, 7);
+  assert.strictEqual(nBedWindow_(ns.slice(0, 10)), null);
+  ns.push({ date: '2026-10-31', score: 80, bed_start: '23:02' }); assert(nBedWindow_(ns).streak >= 1);
+});
+
+test('mail della sera: cosa sistemare solo quando serve, oggetto chiaro', () => {
+  const ok = wkEveningBuild_({ room: { ts: '2026-11-25 21:30', t: 19.5, rh: 52, co2: 640 }, out: { t: 11.9 }, night: { over1000: 0 }, bw: null, exp: null, url: '' });
+  assert.strictEqual(ok.fix.length, 0); assert(/camera a posto/.test(ok.subject));
+  const bad = wkEveningBuild_({ room: { ts: '2026-11-25 21:30', t: 21.4, rh: 63, co2: 950 }, out: { t: 11.9 }, night: { over1000: 180 },
+    bw: { from: '22:50', to: '23:25', streak: 2 }, exp: { t: 'Camera sotto i 20 °C', how: 'x', k: 3 }, url: 'https://script.google.com/macros/s/X/dev' });
+  assert.strictEqual(bad.fix.length, 4, bad.fix.join(' | ')); assert(/4 cose da sistemare/.test(bad.subject));
+  assert(/3 ore/.test(bad.html) && /22:50/.test(bad.html) && /notte 3 di 7/.test(bad.html) && /fuori ci sono 11,9/.test(bad.html) && /macros\/s\/X\/dev/.test(bad.html));
+  assert.strictEqual(wkEveningBuild_({ room: null }).fix.length, 1, 'senza letture: lo dice');
+});
+
+test('nAssemble_: le schede nuove arrivano all\'app', () => {
+  const D = nAssemble_({ sb: [['timestamp', 'temp_c', 'rh_pct', 'co2_ppm', 'battery']], Garmin: [['date']], Renpho: [['date']],
+    Calendario: [CX_CAL_HEADER, ['2026-11-20', 1, 0, '18:00', 1]], Meteo: [CX_MET_HEADER, ['2026-11-21', 9.5, 70, 1012, -3.1, 16]] }, '2026-11-21 10:00', {});
+  assert.strictEqual(D.calendar['2026-11-20'].fisio, true); assert.strictEqual(D.weather['2026-11-21'].dp, -3.1); assert.strictEqual(D.bedWindow, null);
+});
+
 test('lavori del pianificatore: funzioni esistenti', () => {
   E_JOBS.concat(E_MIGRATIONS).forEach(j => { assert.strictEqual(typeof global[j.fn], 'function', j.fn); if (j.until) assert.strictEqual(typeof global[j.until], 'function', j.until); });
 });

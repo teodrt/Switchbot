@@ -63,9 +63,9 @@ window.__startRitmo = function () {
   function build(b64) {
     var wb = XLSX.read(b64.replace(/\s/g, ''), { type: 'base64', cellDates: true });
     var S = {}; wb.SheetNames.forEach(function (n, i) { S[n] = rows(wb.Sheets[n], i === 0); });
-    var now = madridNow();
-    var D = nBuild_(S[wb.SheetNames[0]] || [], S.Garmin || [], S.Renpho || [], now);
-    D.activities = nActivities_(S.Attivita || []); D.mood = nMood_(S.Umore || []); D.settings = nSettings_(); D.engine = engineOf(S.Motore);
+    S.sb = S[wb.SheetNames[0]] || [];
+    var D = nAssemble_(S, madridNow(), nSettings_());   // stessa funzione della web app (dashboard.gs)
+    D.engine = engineOf(S.Motore);
     return D;
   }
   var started = false;

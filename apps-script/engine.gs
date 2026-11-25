@@ -14,6 +14,9 @@ const E_JOBS = [
   { id: 'switchbot', fn: 'logReading', every: true },
   { id: 'air', fn: 'airSync', every: true },
   { id: 'garmin', fn: 'garminDaily', daily: '07:30', until: 'gHasToday_', retryMin: 30, giveUp: '13:00' },
+  { id: 'calendar', fn: 'cxCalendarDaily', daily: '06:30' },       // fisio e serate dal calendario (giorni finiti)
+  { id: 'meteo', fn: 'cxWeatherDaily', daily: '07:15' },           // meteo della notte appena passata
+  { id: 'evening', fn: 'wkEvening', daily: '21:30' },              // mail della sera: aria, cosa fare, ora ideale
   { id: 'reminder', fn: 'nCheckinReminder', daily: '07:00', until: 'nReminderDone_', retryMin: 10, giveUp: '12:30' },
   { id: 'renpho', fn: 'renphoDaily', daily: '11:00' },
   { id: 'report', fn: 'ritmoReportWeekly', weekly: [1, '08:40'] }
@@ -203,12 +206,20 @@ function eAirNow_(ss) {
 
 /** Riepilogo della notte (22-8): CO2 media e massima, temperatura media, minuti sopra 1000 ppm. */
 function eAirNight_(ss) {
+  const s = eAirNightStats_(ss);
+  if (!s.n) return 'nessuna lettura valida per la notte ' + s.start + ' / ' + s.end;
+  return 'notte ' + s.start.slice(8) + '/' + s.end.slice(8) + ' · CO2 media ' + s.co2Avg + ' ppm, massima ' + s.co2Max +
+    ', sopra 1000 per ' + s.over1000 + ' min · temperatura media ' + String(s.tAvg).replace('.', ',') + ' °C · ' + s.n + ' letture';
+}
+
+/** Numeri della notte più recente (22-8): CO2 media e massima, minuti sopra 1000, temperatura media, letture. */
+function eAirNightStats_(ss) {
   const now = new Date(), h = +Utilities.formatDate(now, E_TZ, 'H');
   const end = h >= 8 ? Utilities.formatDate(now, E_TZ, 'yyyy-MM-dd') : Utilities.formatDate(new Date(now.getTime() - 86400000), E_TZ, 'yyyy-MM-dd');
   const start = Utilities.formatDate(new Date(new Date(end + 'T12:00:00Z').getTime() - 86400000), E_TZ, 'yyyy-MM-dd');
   const rows = eAirRows_(ss, 40).filter(r => r[0] >= start + ' 22:00' && r[0] <= end + ' 08:00');
-  if (!rows.length) return 'nessuna lettura valida per la notte ' + start + ' / ' + end;
+  if (!rows.length) return { start: start, end: end, n: 0 };
   const avg = a => a.reduce((s, x) => s + x, 0) / a.length, co2 = rows.map(r => r[3]);
-  return 'notte ' + start.slice(8) + '/' + end.slice(8) + ' · CO2 media ' + Math.round(avg(co2)) + ' ppm, massima ' + Math.max.apply(null, co2) +
-    ', sopra 1000 per ' + co2.filter(x => x > 1000).length * 10 + ' min · temperatura media ' + avg(rows.map(r => r[1])).toFixed(1).replace('.', ',') + ' °C · ' + rows.length + ' letture';
+  return { start: start, end: end, n: rows.length, co2Avg: Math.round(avg(co2)), co2Max: Math.max.apply(null, co2),
+    over1000: co2.filter(x => x > 1000).length * 10, tAvg: Math.round(avg(rows.map(r => r[1])) * 10) / 10 };
 }

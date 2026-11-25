@@ -133,3 +133,59 @@ function wkHtml_(w, url) {
 
 function wkEsc_(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function wkDay_(d) { const g = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'][new Date(d + 'T12:00:00Z').getUTCDay()]; return g + ' ' + (+d.slice(8, 10)) + '/' + (+d.slice(5, 7)); }
+
+// ===== Mail della sera (21:30): aria della camera adesso, cosa fare prima di dormire, ora ideale, esperimento =====
+const WK_EXPS = {
+  temp: { t: 'Camera sotto i 20 °C', how: 'abbassa il riscaldamento o arieggia: la camera deve restare sotto i 20 °C.' },
+  co2: { t: 'Aria fresca: CO2 sotto 800', how: 'socchiudi la finestra o la porta: la CO2 media della notte deve restare sotto 800 ppm.' },
+  bed: { t: 'A dormire entro le 23', how: 'spegni la luce in tempo per addormentarti entro le 23:00.' },
+  caffe: { t: 'Niente caffè dopo le 15', how: 'ultimo caffè entro le 15; se sgarri, segnalo nel check-in di domattina.' }
+};
+
+function wkEvening() {
+  const p = PropertiesService.getScriptProperties();
+  const ss = SpreadsheetApp.openById(p.getProperty('SHEET_ID'));
+  const last = eAirRows_(ss, 2).pop();
+  const night = eAirNightStats_(ss);
+  const D = nData_();
+  const today = Utilities.formatDate(new Date(), WK_TZ, 'yyyy-MM-dd');
+  const e = ((D.settings && D.settings.exps) || []).filter(x => !x.stop).pop();
+  let exp = null;
+  if (e && WK_EXPS[e.id]) {
+    const k = Math.round((Date.parse(today) - Date.parse(e.start)) / 86400000) + 1;
+    if (k >= 1 && k <= 7) exp = { t: WK_EXPS[e.id].t, how: WK_EXPS[e.id].how, k: k };
+  }
+  const w = wkEveningBuild_({ room: last ? { ts: last[0], t: last[1], rh: last[2], co2: last[3] } : null, out: cxOutsideNow_(),
+    night: night.n ? night : null, bw: D.bedWindow, exp: exp, url: p.getProperty('RITMO_URL') || p.getProperty('APP_URL') || '' });
+  MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: w.subject, htmlBody: w.html, name: 'Ritmo' });
+}
+
+/** Funzione pura: dati della sera -> { subject, html, fix (cose da sistemare in camera), all (tutti i consigli) }. */
+function wkEveningBuild_(x) {
+  const f1 = v => String(Math.round(v * 10) / 10).replace('.', ',');
+  const dur = m => m < 60 ? m + ' minuti' : Math.floor(m / 60) + (Math.floor(m / 60) === 1 ? ' ora' : ' ore') + (m % 60 ? ' e ' + (m % 60) + ' minuti' : '');
+  const r = x.room, o = x.out, fix = [], more = [];
+  if (!r) fix.push('Nessuna lettura recente dalla camera: controlla che il sensore sia acceso e vicino all\'Hub 2.');
+  else {
+    if (r.t > 20) fix.push('Camera a ' + f1(r.t) + ' °C: abbassa il riscaldamento di 1-2 gradi (per dormire l\'ideale è 17-20 °C).');
+    else if (r.t < 16) fix.push('Camera a ' + f1(r.t) + ' °C: un po\' fredda, alza leggermente il riscaldamento.');
+    if (r.co2 > 800) fix.push('CO2 a ' + r.co2 + ' ppm: arieggia 10 minuti' + (o && typeof o.t === 'number' ? ' (fuori ci sono ' + f1(o.t) + ' °C)' : '') + '.');
+    if (r.rh > 60) fix.push('Umidità al ' + r.rh + ' %: arieggia qualche minuto.');
+    else if (r.rh < 40) fix.push('Umidità al ' + r.rh + ' %: aria secca, una bacinella d\'acqua vicino al termosifone aiuta.');
+  }
+  if (x.night && x.night.over1000 >= 60) fix.push('Stanotte la CO2 è rimasta sopra 1000 ppm per ' + dur(x.night.over1000) + ': se puoi, dormi con la finestra o la porta socchiusa.');
+  if (x.bw) more.push('Prova ad addormentarti tra le ' + x.bw.from + ' e le ' + x.bw.to + ': è la finestra delle tue notti migliori' +
+    (x.bw.streak ? ' (sei a ' + x.bw.streak + (x.bw.streak === 1 ? ' notte' : ' notti') + ' di fila dentro)' : '') + '.');
+  if (x.exp) more.push('Esperimento "' + x.exp.t + '", notte ' + x.exp.k + ' di 7: ' + x.exp.how);
+  const all = fix.concat(more);
+  const subject = 'Ritmo · stasera: ' + (fix.length ? fix.length + (fix.length === 1 ? ' cosa da sistemare' : ' cose da sistemare') : 'camera a posto');
+  const head = r ? 'Camera alle ' + String(r.ts).slice(11, 16) + ': <b>' + f1(r.t) + ' °C</b> · <b>' + r.rh + ' %</b> · CO2 <b>' + r.co2 + ' ppm</b>' +
+    (o && typeof o.t === 'number' ? ' · fuori ' + f1(o.t) + ' °C' : '') : '';
+  const html = '<div style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px;color:#1d2433;max-width:560px">' +
+    (head ? '<p style="margin:0 0 12px">' + head + '</p>' : '') +
+    (fix.length ? '' : '<p style="margin:0 0 10px">La camera è a posto per dormire.</p>') +
+    (all.length ? '<ul style="margin:0 0 14px;padding-left:20px">' + all.map(t => '<li style="margin:0 0 8px">' + t + '</li>').join('') + '</ul>' : '') +
+    (x.url ? '<p><a href="' + x.url + '" style="display:inline-block;background:#3d6bff;color:#fff;text-decoration:none;padding:11px 20px;border-radius:12px;font-weight:600">Apri Ritmo</a></p>' : '') +
+    '<p style="font-size:12px;color:#8a93ab">Mail della sera di Ritmo, alle 21:30 con i dati del sensore in quel momento.</p></div>';
+  return { subject: subject, html: html, fix: fix, all: all };
+}
