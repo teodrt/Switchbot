@@ -117,12 +117,16 @@ function nSettings_() {
   let st = {};
   try { st = JSON.parse(PropertiesService.getScriptProperties().getProperty('APP_SETTINGS') || '{}'); } catch (e) { st = {}; }
   if (!('op_date' in st) && (st.hide || []).indexOf('recovery') < 0) st.op_date = N_OP_DATE;
+  if (!st.place) st.place = N_PLACE;
   return st;
 }
 // Data dell'operazione del proprietario del ramo main: messa nel codice pubblico con il suo consenso (19/11/2026),
 // così l'app non la chiede. Si può cambiare dall'app ("giorno N ›"): il valore salvato in APP_SETTINGS ha la precedenza.
 // Il ramo p2 della seconda persona non deve avere questa riga.
 const N_OP_DATE = '2026-10-21';
+// Città per il meteo del proprietario del ramo main (solo la città, coordinate del centro), con il suo consenso
+// (25/11/2026). Una città scelta nell'app ha la precedenza. Il ramo p2 non deve avere questa riga.
+const N_PLACE = { name: 'Barcellona', lat: 41.39, lon: 2.16 };
 
 /** Attività sportive (scheda "Attivita"): [data, ora, tipo, nome, minuti, km, FC media, FC max, kcal, TE aerobico, TE anaerobico, carico, VO2max]. */
 function nActivities_(rows) {
