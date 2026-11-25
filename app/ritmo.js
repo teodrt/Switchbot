@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '26 nov 2026 · v5.8';
+  const RELEASE = '26 nov 2026 · v5.8.1';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -914,7 +914,7 @@
         <div class="row-wrap"><input type="text" id="cityIn" placeholder="Es. Barcellona" class="dinput" autocomplete="off"><button class="btn" id="citySave" style="padding:10px 16px;font-size:.9rem">Salva</button></div>`;
       $('#citySave', c).onclick = e => { e.stopPropagation(); const v = $('#cityIn', c).value.trim(); if (!v) { toast('Scrivi una città'); return; } toast('Cerco la città e scarico il meteo...'); saveSettings({ city: v }); };
     };
-    if (!days.length) { ask(); return c; }
+    if (!days.length) { if (place) return null; ask(); return c; }   // città già scelta: il riquadro arriva con i dati, senza domande
     const ld = days[days.length - 1], w = WX[ld], n = byDate[ld];
     const pts = days.filter(d => dayNum(d) > dayNum(ld) - 30 && isNum(WX[d].t)).map(d => [dayNum(d), WX[d].t, d]);
     const room = days.filter(d => dayNum(d) > dayNum(ld) - 30 && byDate[d] && byDate[d].air && isNum(byDate[d].air.temp_avg)).map(d => [dayNum(d), byDate[d].air.temp_avg, d]);
@@ -925,7 +925,6 @@
         tip: p => { const d = p[2], r = byDate[d] && byDate[d].air; return `${dLabel(d)} · fuori <b>${fmt(WX[d].t, 1)} °C</b>` + (r && isNum(r.temp_avg) ? ' · camera <b>' + fmt(r.temp_avg, 1) + ' °C</b>' : '') + (isNum(WX[d].p) ? ' · ' + fmt(WX[d].p) + ' hPa' : ''); } });
       c.appendChild(h('div', 'legend', '<span><i class="sw" style="background:var(--c-casa)"></i>fuori, media della notte</span><span><i class="sw" style="background:var(--c-oggi)"></i>camera</span>'));
     }
-    const ch = h('button', 'more', 'Cambia città'); ch.style.justifySelf = 'start'; ch.onclick = e => { e.stopPropagation(); ask(); }; c.appendChild(ch);
     return c;
   };
   // Tendenza della composizione (ultimi 60 giorni, almeno 4 pesate): pendenza robusta (Theil-Sen) di grasso e muscoli.
@@ -1295,7 +1294,7 @@
         <div class="grid2" style="margin-top:14px">${stat('Temperatura', fmt(rm.temp, 1), '°C', 'per dormire 17-20', tempState(rm.temp))}${stat('Umidità', fmt(rm.rh), '%', 'ideale 40-60', rhState(rm.rh))}</div>`;
       v.appendChild(c);
     }
-    v.appendChild(weatherCard());
+    { const wc = weatherCard(); if (wc) v.appendChild(wc); }
     if (hb) v.appendChild(h('section', 'card', `<div class="chead"><span class="eyebrow"><i></i>Seconda stanza</span></div><div class="grid3">${stat('Temperatura', fmt(hb.temp, 1), '°C', 'Hub 2', '')}${stat('Umidità', fmt(hb.rh), '%', '', rhState(hb.rh))}${stat('Luce', fmt(hb.light), '/20', '', '')}</div>`));
     const rec = DATA.recent || [];
     if (rec.length) {

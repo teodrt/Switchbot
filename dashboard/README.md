@@ -46,7 +46,7 @@ ognuna entra nell'analisi come fattore (notti con contro notti senza).
   notti con score sotto 60. Tendenza (Theil-Sen, almeno 5 check-in in 3 settimane): in calo, stabile, in aumento.
 - **Ora ideale** (Sonno, Stasera, mail della sera): `nBedWindow_`, 25°-75° percentile dell'ora di inizio sonno
   nel terzo migliore delle ultime 90 notti (finestra 30-90 minuti), score medio dentro e fuori, serie di notti di fila.
-- **Meteo fuori** (Casa): notte per notte da Open-Meteo, con la camera a confronto. Fattori dell'analisi:
+- **Meteo fuori** (Casa, solo quando ci sono i dati; la città si chiede solo se non è impostata): notte per notte da Open-Meteo, con la camera a confronto. Fattori dell'analisi:
   temperatura esterna della notte, variazione della pressione in 24 ore.
 - **Calendario**: fisio (conta solo se in calendario ci sono sedute) e serate con impegni dopo le 21 come fattori.
 - **Tendenza della composizione** (Corpo, e storia in Oggi se serve): pendenza robusta di grasso e muscoli sugli
