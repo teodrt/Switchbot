@@ -37,7 +37,7 @@ Riquadro in Oggi: per sleep score, HRV, battito a riposo (invertito), sonno prof
 mediana delle ultime 7 notti divisa per la mediana dei 60 giorni prima dell'operazione (100 % = come prima;
 verde ≥ 97 %, giallo ≥ 85 %, rosso sotto). Più il dolore medio dei check-in. La data si inserisce dall'app.
 Sopra il contagiri c'è sempre la notte a cui si riferisce (in giallo se non è ancora quella appena passata).
-Caselle "Ieri e stanotte" nel check-in (fisio, antidolorifico, alcol, caffè dopo le 15, cena tardi, finestra aperta):
+Caselle "Ieri e stanotte" nel check-in (fisio, antidolorifico, alcol, caffè dopo le 15, cena tardi, finestra aperta, ufficio, tè):
 ognuna entra nell'analisi come fattore (notti con contro notti senza).
 
 ## Contesto: dolore, ora ideale, meteo, calendario, corpo
@@ -106,3 +106,10 @@ oltre 2,5 deviazioni assolute mediane).
 - **Sto ancora imparando**: fattori della camera con meno di 12 notti, con barra di avanzamento.
 - L'analisi si calcola la prima volta che serve (Oggi o Analisi), non all'apertura.
 - Il generatore casuale ha un seme fisso, così la pagina dà sempre gli stessi risultati sugli stessi dati.
+
+## Diario da un link
+
+Se il link dell'app finisce con `#diario=<JSON in base64url>` (lista di `{date, note, tags, energy?, mood?, pain?}`),
+all'apertura l'app mostra i giorni e li salva con un tocco tramite `ritmoSaveCheckin`, un giorno alla volta.
+Serve a riportare nel foglio giorni raccontati in chat. I valori già salvati restano (note unite, tag sommati);
+solo gli ultimi 60 giorni, al massimo 31. Il link contiene dati personali: si dà solo in chat, mai nel repo.

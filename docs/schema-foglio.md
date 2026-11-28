@@ -97,7 +97,7 @@ Check-in giornaliero scritto dall'app (`ritmoSaveCheckin` in `dashboard.gs`), un
 | D | `mood` | 1-5 (giù ... ottimo) |
 | E | `pain` | 0-10 |
 | F | `note` | testo libero, al massimo 280 caratteri |
-| G | `tags` | cosa hai fatto ieri e stanotte, separato da virgole: `fisio`, `antidolorifico`, `alcol`, `caffe` (dopo le 15), `cena` (tardi), `finestra` (aperta di notte) |
+| G | `tags` | cosa hai fatto ieri e stanotte, separato da virgole: `fisio`, `antidolorifico`, `alcol`, `caffe` (dopo le 15), `cena` (tardi), `finestra` (aperta di notte), `ufficio` (giornata in ufficio), `te` (tè) |
 
 ## Scheda `Calendario`
 
