@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '26 nov 2026 · v5.8.1';
+  const RELEASE = '28 nov 2026 · v5.9';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -64,7 +64,9 @@
     ['alcol', 'Alcol', 'alcol la sera prima', 'dopo alcol', 'senza alcol', 'Dopo aver bevuto alcol'],
     ['caffe', 'Caffè dopo le 15', 'caffè dopo le 15', 'con caffè tardi', 'senza caffè tardi', 'Con il caffè dopo le 15'],
     ['cena', 'Cena tardi', 'cena tardi', 'dopo una cena tardi', 'dopo una cena presto', 'Dopo una cena tardi'],
-    ['finestra', 'Finestra aperta', 'finestra aperta di notte', 'con la finestra aperta', 'con la finestra chiusa', 'Con la finestra aperta']];
+    ['finestra', 'Finestra aperta', 'finestra aperta di notte', 'con la finestra aperta', 'con la finestra chiusa', 'Con la finestra aperta'],
+    ['ufficio', 'Ufficio', 'giornata in ufficio il giorno prima', 'dopo una giornata in ufficio', 'dopo una giornata a casa', 'Dopo una giornata in ufficio'],
+    ['te', 'Tè', 'tè il giorno prima', 'dopo il tè', 'senza tè', 'Dopo aver bevuto tè']];
   const tagName = k => (TAGS.find(t => t[0] === k) || [k, k])[1];
   const absToDate = m => new Date(m * 60000);
   const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -588,7 +590,7 @@
   const moodLevel = (v, hi) => !isNum(v) ? '' : hi ? (v >= 4 ? 'good' : v >= 3 ? 'warn' : 'bad') : (v <= 2 ? 'good' : v <= 5 ? 'warn' : 'bad');
   const diaryRow = (d, m) => m
     ? `<button class="drow" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span>
-        <span class="dv"><span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span><span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span><span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span>${(m.tags || []).map(t => '<span class="pill">' + esc(tagName(t)) + '</span>').join('')}${(m.tags || []).indexOf('fisio') < 0 && CAL[addDays(d, -1)] && CAL[addDays(d, -1)].fisio ? '<span class="pill">Fisio (calendario)</span>' : ''}</span>
+        <span class="dv">${isNum(m.energy) ? `<span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span>` : ''}${isNum(m.mood) ? `<span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span>` : ''}${isNum(m.pain) ? `<span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span>` : ''}${(m.tags || []).map(t => '<span class="pill">' + esc(tagName(t)) + '</span>').join('')}${(m.tags || []).indexOf('fisio') < 0 && CAL[addDays(d, -1)] && CAL[addDays(d, -1)].fisio ? '<span class="pill">Fisio (calendario)</span>' : ''}</span>
         ${m.note ? `<span class="dn">“${esc(m.note)}”</span>` : ''}</button>`
     : `<button class="drow miss" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span><span class="dv faint">nessun check-in · <span class="more">aggiungi +</span></span></button>`;
   const bindDiary = el => el.querySelectorAll('.drow').forEach(b => { b.onclick = e => { e.stopPropagation(); buzz(); openCheckin(null, b.dataset.day); }; });
@@ -643,6 +645,56 @@
     };
     box.appendChild(save);
   });
+  // Diario da un link: l'indirizzo dell'app con "#diario=<JSON in base64url>" (giorni ricostruiti in chat).
+  // Niente dati nel codice: arrivano solo dal link, si mostrano e si salvano con un tocco, un giorno alla volta.
+  const diaryFromHash = hsh => {
+    const m = String(hsh || '').replace(/^#/, '').match(/^diario=([A-Za-z0-9_-]+={0,2})$/);
+    if (!m) return [];
+    let list = [];
+    try {
+      const bin = atob(m[1].replace(/-/g, '+').replace(/_/g, '/'));
+      list = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))));
+    } catch (e) { return []; }
+    const lo = addDays(today, -60), ok = (v, a, b) => isNum(v) && v >= a && v <= b;
+    return (Array.isArray(list) ? list : []).filter(e => e && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && e.date >= lo && e.date <= today).slice(0, 31).map(e => {
+      const old = MOOD.find(x => x.date === e.date) || {}, note = String(e.note || '').trim(), was = String(old.note || '').trim();
+      const r = { date: e.date, note: (note && was && note.indexOf(was) < 0 ? was + ' · ' + note : note || was).slice(0, 280),
+        tags: Array.from(new Set((old.tags || []).concat(Array.isArray(e.tags) ? e.tags : []))).filter(t => TAGS.some(x => x[0] === t)) };
+      [['energy', 1, 5], ['mood', 1, 5], ['pain', 0, 10]].forEach(([k, a, b]) => { const v = ok(e[k], a, b) ? e[k] : old[k]; if (ok(v, a, b)) r[k] = v; });
+      return r;
+    }).sort((a, b) => a.date < b.date ? -1 : 1);
+  };
+  const importDiary = () => {
+    const gs = window.google && google.script;
+    if (!gs || !gs.url || !gs.run) return;
+    try { gs.url.getLocation(loc => {
+      const list = diaryFromHash(loc && loc.hash);
+      if (!list.length) return;
+      sheet((box, close) => {
+        paint(box, 'insight');
+        box.innerHTML = `<div><span class="eyebrow"><i></i>Diario</span><h2 style="margin-top:6px">${list.length} giorni da salvare</h2>
+          <p class="muted small" style="margin-top:4px">Ricostruiti da quello che hai raccontato. Controlla e salva: finiscono nel foglio come i check-in.</p></div>
+          <div class="diary">${list.map(e => diaryRow(e.date, e)).join('')}</div>`;
+        const save = h('button', 'btn', icon('check') + 'Salva nel diario');
+        save.querySelector('svg').style.cssText = 'width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.6';
+        save.onclick = () => {
+          save.disabled = true; let i = 0;
+          const next = () => {
+            if (i >= list.length) {
+              try { gs.history.replace(null, {}, ''); } catch (e) {}
+              ANALYSIS = null; close(); toast('Diario salvato: ' + list.length + ' giorni'); updateFab(); rerender(); return;
+            }
+            save.textContent = 'Salvo ' + (i + 1) + ' di ' + list.length + '...';
+            gs.run.withSuccessHandler(r => { MOOD = MOOD.filter(m => m.date !== r.date).concat([r]); i++; next(); })
+              .withFailureHandler(err => { save.disabled = false; save.textContent = 'Riprova'; toast('Non salvato: ' + (err && err.message ? err.message : 'errore')); })
+              .ritmoSaveCheckin(list[i]);
+          };
+          next();
+        };
+        box.appendChild(save);
+      });
+    }); } catch (e) {}
+  };
   const fab = $('#fab');
   const updateFab = () => { const done = !!todayMood(); fab.classList.toggle('done', done); fab.innerHTML = done ? '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>'; fab.setAttribute('aria-label', done ? 'Check-in fatto, modifica' : 'Check-in: come ti senti'); };
   fab.onclick = () => { buzz(); openCheckin(); };
@@ -1405,6 +1457,7 @@
   // avvio: segnala al motore che l'app è stata aperta (versione e ora, per la diagnosi)
   setTimeout(setBadge, 400);
   try { if (window.google && google.script && google.script.run) google.script.run.withFailureHandler(() => {}).ritmoSaveCheckin({ ping: true, release: RELEASE, ref: REF, view: (location.hash || '#oggi').slice(1), w: window.innerWidth, url: document.referrer || '' }); } catch (e) {}
+  importDiary();
   const start = (location.hash || '').replace('#', '');
   go(TABS.some(t => t[0] === start) || start === 'insight' ? start : 'oggi');
   }

@@ -108,7 +108,7 @@ function nBedWindow_(nights) {
 
 const N_MOOD_TAB = 'Umore';
 const N_MOOD_HEADER = ['date', 'time', 'energy', 'mood', 'pain', 'note', 'tags'];
-const N_TAGS = ['fisio', 'antidolorifico', 'alcol', 'caffe', 'cena', 'finestra'];   // caselle del check-in (ieri e stanotte)
+const N_TAGS = ['fisio', 'antidolorifico', 'alcol', 'caffe', 'cena', 'finestra', 'ufficio', 'te'];   // caselle del check-in (ieri e stanotte)
 const N_EXPS = ['temp', 'co2', 'bed', 'caffe'];
 const N_FEATURES = ['recovery', 'tonight'];   // parti dell'app che si possono nascondere   // esperimenti di 7 notti che l'app sa misurare
 
