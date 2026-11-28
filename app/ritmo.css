@@ -313,6 +313,7 @@ textarea { width: 100%; min-height: 74px; resize: vertical; border-radius: 14px;
 .drow + .drow { border-top: 1px solid var(--line); border-radius: 0; }
 .drow .dd { display: grid; line-height: 1.15; } .drow .dd b { font-weight: 600; font-size: .86rem; } .drow .dd em { font-style: normal; font-family: var(--f-data); font-size: .62rem; color: var(--sec); letter-spacing: .08em; text-transform: uppercase; }
 .drow .dv { display: flex; gap: 5px; flex-wrap: wrap; font-size: .8rem; }
+.drow .dprev { color: var(--faint); font-size: .74rem; align-self: center; }
 .drow .dn { grid-column: 2; font-size: .84rem; color: var(--muted); line-height: 1.35; }
 .drow.miss .dd b { color: var(--faint); }
 

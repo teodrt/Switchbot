@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Versione: data della release (aggiornarla a ogni modifica) e commit da cui jsDelivr ha servito il file.
-  const RELEASE = '28 nov 2026 · v5.9';
+  const RELEASE = '28 nov 2026 · v5.9.1';
   const SRC = (document.currentScript && document.currentScript.src) || '';
   const REF = (SRC.match(/@([0-9a-f]{7,40}|main)\//) || [])[1] || 'locale';
   const FONTS = 'https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,600;1,700;1,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap';
@@ -588,9 +588,15 @@
   const ENERGY = ['Scarico', 'Basso', 'Normale', 'Buono', 'Carico'], MOODL = ['Giù', 'Così così', 'Normale', 'Bene', 'Ottimo'];
   // Diario: una riga per check-in con i tre valori e la nota; tocca per modificare.
   const moodLevel = (v, hi) => !isNum(v) ? '' : hi ? (v >= 4 ? 'good' : v >= 3 ? 'warn' : 'bad') : (v <= 2 ? 'good' : v <= 5 ? 'warn' : 'bad');
+  // Le caselle valgono per il giorno prima e la notte: nel diario si dice di quale giorno sono (es. "giovedì:").
+  const diaryTags = (d, m) => {
+    const p = addDays(d, -1), calF = (m.tags || []).indexOf('fisio') < 0 && CAL[p] && CAL[p].fisio;
+    const pills = (m.tags || []).map(t => '<span class="pill">' + esc(tagName(t)) + '</span>').join('') + (calF ? '<span class="pill">Fisio (calendario)</span>' : '');
+    return pills ? '<span class="dprev">' + GIORNI[dow(p)] + ':</span>' + pills : '';
+  };
   const diaryRow = (d, m) => m
     ? `<button class="drow" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span>
-        <span class="dv">${isNum(m.energy) ? `<span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span>` : ''}${isNum(m.mood) ? `<span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span>` : ''}${isNum(m.pain) ? `<span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span>` : ''}${(m.tags || []).map(t => '<span class="pill">' + esc(tagName(t)) + '</span>').join('')}${(m.tags || []).indexOf('fisio') < 0 && CAL[addDays(d, -1)] && CAL[addDays(d, -1)].fisio ? '<span class="pill">Fisio (calendario)</span>' : ''}</span>
+        <span class="dv">${isNum(m.energy) ? `<span class="pill ${moodLevel(m.energy, 1)}">Energia ${fmt(m.energy)}</span>` : ''}${isNum(m.mood) ? `<span class="pill ${moodLevel(m.mood, 1)}">Umore ${fmt(m.mood)}</span>` : ''}${isNum(m.pain) ? `<span class="pill ${moodLevel(m.pain, 0)}">Dolore ${fmt(m.pain)}</span>` : ''}${diaryTags(d, m)}</span>
         ${m.note ? `<span class="dn">“${esc(m.note)}”</span>` : ''}</button>`
     : `<button class="drow miss" data-day="${d}"><span class="dd"><b>${cap(GIORNI[dow(d)].slice(0, 3))} ${dLabel(d)}</b>${d === today ? '<em>oggi</em>' : ''}</span><span class="dv faint">nessun check-in · <span class="more">aggiungi +</span></span></button>`;
   const bindDiary = el => el.querySelectorAll('.drow').forEach(b => { b.onclick = e => { e.stopPropagation(); buzz(); openCheckin(null, b.dataset.day); }; });
